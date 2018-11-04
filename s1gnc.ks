@@ -49,7 +49,7 @@
 		// Tough luck
 
 // Define constants.
-SET h TO 25. 
+SET h TO ALT:RADAR*0.75.
 SET g TO 9.80665.
 
 // Start MET, fuel consumption, initialise some values
