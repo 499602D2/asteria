@@ -1,10 +1,10 @@
 # Asteria
 Asteria — kOS launch and landing guidance for Kerbal Space Program
 
-## What is this?
+### What is this?
 Asteria is a kOS script capable of launching a two-staged craft to any specified orbit and recovering the first stage via RTLS or a downrange ASDS landing. The script performs a suicide burn, minimising fuel use and thus maximizing available delta-v.
 
-## Quickstart
+### Quickstart
 Your craft must have the following specifications:
 - Grid fins and landing legs on S1 (don't use airbrakes - if you don't have grid fins, use regular fins)
 - A kOS terminal on both S1 and S2
@@ -18,12 +18,12 @@ You _must_ have the following mods installed:
 - Trajectories
 - kOS
 
-## Modifying the file
+### Modifying the file
 - At the top of the file, specify your desired orbit by modifying apoapsis(AP), inclination(INC), and eccentricity(ECC).
 - Specify whether your engines support multiple modes; right click the engines to find out (e.g. Falcon 9's engine modes)
 - Specify the launch options (1 = true, 0 = false): launch, boostback, s2guidance, modeswitch (autotransfer from RTLS to ASDS)
 
-## Running
+### Running
 - Place the s1gnc and s2gnc files into /Ships/Script in your KSP installation folder.
 - Open the Trajectories mod's menu and set entry to retrograde
 - Open the kOS terminals for both S1 and S2. Type `switch to 0. run s1gnc.` in the S1 terminal, and `switch to 0. run s2gnc.` in the S2 terminal.
