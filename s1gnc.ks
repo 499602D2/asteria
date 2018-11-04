@@ -1,52 +1,14 @@
-// OPTIMISED VERSION OF INITIAL CONSERVATIVE LANDING SCRIPT
-// NOW WITH BOOSTBACK!(and some other things too I guess)
+// Asteria v1.3.1
+// Created by 0x12e
 
-// Created by Ayy Lmao
-	// Version 0.01: 2018/02/13
-	// Version 0.99: 2018/02/17
-	// Version 1.0b1 2018/03/10
-	// Version 1.0b4 2018/06/08
-	// Version 1.2 2018/07/20
-	// Version 1.3 2018/09/14
-	// Version 1.3.1 2018/10
-
-// To-do:
-	// Fail-modes
-	// More advanced orbital parameters
-	// Move launch to its own function
-
-// How the hell do I use this thing?
-	// NOTE
-	// YOU CAN !NOT! RUN BOTH S2 GUIDANCE AND S1 RECOVERY AT THE SAME TIME (ALL THE WAY TO THE END) DUE TO KSP LIMITATIONS
-		// These include the inability to stage a vessel that's not focused, limitations of the trajectories mod,
-		// and the 100 km limit between active vessels. 
-
-	// 0. Your ship
-		// It can NOT have AIRBRAKES, because these provide zero control during entry
-		// Either use gridfins, or use nothing
-
-	// 1. Mandatory staging order: (if you're launching)
-		// 1. S1 main engines
-		// 2. launch clamps         // If you have additional stages between 2 and 3, stage manually or add additional STAGE-commands.
-		// 3. S2 sep + S2 engine
-
-	// 2. Adjust the script for your vehicle
-		// 1. The height of your vehicle: run "print alt:radar." while on the launch pad.
-		// 1.1 insert said value to h, minus ~20%
-		// 2. Pick expendable mode or recovery target, and whether to allow transfer from RTLS to ASDS
-		// 3. Choose all that apply to your use case: launch/boostback/guided recovery. Usually it's either all three or boostback + guidance
-		// 4. Adjust apoapsis, inclination, and eccentricity for your desired orbit.
-
-	// 3. Run it
-		// Run "switch to 0. run asteria." in the kOS terminal of the first stage.
-		// Run "switch to 0. run s2gnc." in the kOS terminal of the second stage.
-
-// Common errors
-	// "Argument is out of range." in "SET engine TO engineList[n]."
-		// Cause: you're on the launchpad but haven't got launch set to 1
-
-	// "It just doesn't work for fuck's sake"
-		// Tough luck
+// Version history
+// 0.01: 2018/02/13
+// 0.99: 2018/02/17
+// 1.0b1 2018/03/10
+// 1.0b4 2018/06/08
+// 1.2 2018/07/20
+// 1.3 2018/09/14
+// 1.3.1 2018/10
 
 // Define constants.
 SET h TO ALT:RADAR*0.75.
