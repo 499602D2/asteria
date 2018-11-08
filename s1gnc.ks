@@ -156,9 +156,9 @@ function vehicle_config {
 	}
 
 	IF LAUNCH = 1 {
-		PRINT "Enter apoapsis: ". SET AP TO read_input(16,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 3
-		PRINT "Enter eccentricity: ". SET ECC TO read_input(20,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 4
-		PRINT "Enter inclination: ". SET INCL TO read_input(19,LINENUM,"INT"). SET LINENUM TO LINENUM + 1.  // line 5
+		PRINT "Enter apoapsis (meters): ". SET AP TO read_input(16,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 3
+		PRINT "Enter eccentricity [0,1[: ". SET ECC TO read_input(20,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 4
+		PRINT "Enter inclination (degrees): ". SET INCL TO read_input(19,LINENUM,"INT"). SET LINENUM TO LINENUM + 1.  // line 5
 	}
 
 	PRINT "Recover S1? (y/n): ". 
@@ -198,7 +198,7 @@ function vehicle_config {
 
 	PRINT " ".
 	PRINT "VEHICLE CONFIGURATION COMPLETE. PROCEEDING.".
-	WAIT 2.5.
+	WAIT 3.
 }
 
 function getEngines {
