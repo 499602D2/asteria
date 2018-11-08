@@ -39,8 +39,8 @@ IF ALT:RADAR < 1000 {
 
 IF LAUNCH = 1 {
 	PRINT "Enter apoapsis: ". SET AP TO terminal:input:getchar().
-	PRINT "Enter eccentricity: ". SET ECC TO terminal:input:getchar(). // Eccentricity: circular = 0, elliptical = [0,1], parabolic = 1, hyperbolic > 1
-	PRINT "Enter inclination: ". SET INCL TO terminal:input:getchar(). // 0 = due north, 90 = east, 180 = south, etc.
+	PRINT "Enter eccentricity: ". SET ECC TO terminal:input:getchar(). 
+	PRINT "Enter inclination: ". SET INCL TO terminal:input:getchar(). 
 }
 
 PRINT "Recover S1? (y/n): ". SET input TO terminal:input:getchar().
