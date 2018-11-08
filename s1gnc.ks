@@ -12,6 +12,9 @@
 // 1.31 2018/10
 // 1.32 2018/11
 
+// TO DO:
+// Fix orbital insertion/periapsis lifting
+
 CLEARSCREEN.
 PRINT "WELCOME TO ASTERIA!".
 PRINT "STARTING VEHICLE CONFIGURATION".
@@ -88,25 +91,38 @@ LOCK THROTTLE TO thrott.
 
 // Functions
 function read_input {
-	PARAMETER ORBPARAM.
+	PARAMETER CHARNUM.
 	PARAMETER LINENUM.
-	LOCAL read IS "".
-	LOCAL input IS 0.
+	PARAMETER TYPE.
 
+	LOCAL read IS "".
+	LOCAL input IS "".
 	UNTIL input = terminal:input:enter {
 		SET input TO terminal:input:getchar().
-		SET read TO read + input.
-		IF ORBPARAM = "AP" {
-			PRINT read AT (16,LINENUM).
-		} ELSE IF ORBPARAM = "ECC" {
-			PRINT read AT (20,LINENUM).
-		} ELSE IF ORBPARAM = "INCL" {
-			PRINT read AT (19,LINENUM).
-		} ELSE IF ORBPARAM = "HEIGHT" {
-			PRINT read AT (40,LINENUM).
+		IF input = terminal:input:backspace {
+			IF read:LENGTH > 0 {
+				SET read TO remove_previous(read, CHARNUM, LINENUM).
+			}
+		} ELSE {
+			SET read TO read + input.
 		}
+		PRINT read AT (CHARNUM,LINENUM).
 	}
-	RETURN read:tonumber().
+	IF TYPE = "INT" {
+		RETURN read:tonumber().
+	} ELSE {
+		RETURN read:TRIM().
+	}
+}
+
+function remove_previous {
+	PARAMETER readtext.
+	PARAMETER CHARNUM.
+	PARAMETER LINENUM.
+
+	LOCAL index IS readtext:LENGTH - 1.
+	PRINT " " AT (CHARNUM+index,LINENUM).
+	RETURN readtext:REMOVE(index,1).
 }
 
 function vehicle_config {
@@ -114,8 +130,7 @@ function vehicle_config {
 	SET LINENUM TO 0.
 	IF ALT:RADAR < 1000 {
 		PRINT "Perform a full launch? (y/n): ". 
-		SET input to terminal:input:getchar().
-		PRINT input AT (30,LINENUM).
+		SET input TO read_input(30,LINENUM,"STR").
 		IF input = "y" {
 			SET LAUNCH TO 1.
 			SET BOOSTBACK TO 1.
@@ -124,8 +139,7 @@ function vehicle_config {
 		} SET LINENUM TO LINENUM + 1.
 
 		PRINT "Run S2 guidance? (y/n): ". 
-		SET input to terminal:input:getchar(). // line 1
-		PRINT input AT (24,LINENUM).
+		SET input TO read_input(24,LINENUM,"STR").
 		IF input = "y" {
 			SET S2GUIDANCE TO 1.
 		} ELSE {
@@ -133,8 +147,7 @@ function vehicle_config {
 		} SET LINENUM TO LINENUM + 1.
 	} ELSE {
 		PRINT "Boostback S1? (y/n): ". 
-		SET input to terminal:input:getchar(). // line 2
-		PRINT input AT (21,LINENUM).
+		SET input TO read_input(21,LINENUM,"STR").
 		IF input = "y" {
 			SET BOOSTBACK TO 1.
 		} ELSE {
@@ -143,14 +156,13 @@ function vehicle_config {
 	}
 
 	IF LAUNCH = 1 {
-		PRINT "Enter apoapsis: ". SET AP TO read_input("AP",LINENUM). SET LINENUM TO LINENUM + 1. // line 3
-		PRINT "Enter eccentricity: ". SET ECC TO read_input("ECC",LINENUM). SET LINENUM TO LINENUM + 1. // line 4
-		PRINT "Enter inclination: ". SET INCL TO read_input("INCL",LINENUM). SET LINENUM TO LINENUM + 1.  // line 5
+		PRINT "Enter apoapsis: ". SET AP TO read_input(16,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 3
+		PRINT "Enter eccentricity: ". SET ECC TO read_input(20,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 4
+		PRINT "Enter inclination: ". SET INCL TO read_input(19,LINENUM,"INT"). SET LINENUM TO LINENUM + 1.  // line 5
 	}
 
 	PRINT "Recover S1? (y/n): ". 
-	SET input to terminal:input:getchar(). // line 3 or 6
-	PRINT input AT (19,LINENUM).
+	SET input TO read_input(19,LINENUM,"STR").
 	IF input = "y" {
 		SET EXPEND TO 0.
 	} ELSE {
@@ -160,8 +172,7 @@ function vehicle_config {
 	// Vehicle
 	IF EXPEND = 0 {
 		PRINT "Does the engine have modes? (y/n): ". 
-		SET input to terminal:input:getchar().
-		PRINT input AT (35,LINENUM).
+		SET input TO read_input(35,LINENUM,"STR").
 		IF input = "y" { 
 			SET ENGINEMODES TO 1. 
 		} ELSE {
@@ -169,8 +180,7 @@ function vehicle_config {
 		} SET LINENUM TO LINENUM + 1.
 
 		PRINT "Allow switching from RTLS to ASDS? (y/n): ".
-		SET input to terminal:input:getchar().
-		PRINT input AT (42,LINENUM).
+		SET input TO read_input(42,LINENUM,"STR").
 		IF input = "y" {
 			SET MODESWITCH TO 1. // Allow switching from RTLS to ASDS
 		} ELSE {
@@ -183,12 +193,12 @@ function vehicle_config {
 		PRINT "S1 height set to " + round(h,0) + " meters".
 	} ELSE {
 		PRINT "Enter the approx height of S1 (meters): ". 
-		SET h TO read_input("HEIGHT",LINENUM).
+		SET h TO read_input(40,LINENUM,"INT").
 	}
 
 	PRINT " ".
 	PRINT "VEHICLE CONFIGURATION COMPLETE. PROCEEDING.".
-	WAIT 2.
+	WAIT 2.5.
 }
 
 function getEngines {
@@ -1087,7 +1097,9 @@ IF SHIP:STATUS = "LANDED" OR SHIP:VERTICALSPEED >= 0 {
 	SET postlanding TO 1.
 	OUTPUT().
 
-	PRINT ".------------------------------------------------.".
-	PRINT "Thank you for flying with Asteria!".
-	PRINT "Exiting program.".
+	IF DEBUG = 0 {
+		PRINT ".------------------------------------------------.".
+		PRINT "Thank you for flying with Asteria!".
+		PRINT "Exiting program.".
+	}
 }
