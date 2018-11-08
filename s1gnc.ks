@@ -13,19 +13,58 @@
 // 1.32 2018/11
 
 // ORBIT PARAMETERS
-SET AP TO 350000.
-SET ECC TO 0. // Eccentricity: circular = 0, elliptical = [0,1], parabolic = 1, hyperbolic > 1
-SET INCL TO 90. // 0 = due north, 90 = east, 180 = south, etc.
+IF ALT:RADAR < 1000 {
+	PRINT "Perform a full launch? (y/n): ". SET input TO terminal:input:getchar().
+	IF input = "y" {
+		SET LAUNCH TO 1.
+		SET BOOSTBACK TO 1.
+	} ELSE {
+		SET LAUNCH TO 0.
+	}
 
-// LAUNCH PARAMETERS
-SET LAUNCH TO 1.
-SET BOOSTBACK TO 1.
-SET S2GUIDANCE TO 1.
+	PRINT "Run S2 guidance? (y/n): ". SET input to terminal:input:getchar().
+	IF input = "y" {
+		SET S2GUIDANCE TO 1.
+	} ELSE {
+		SET S2GUIDANCE TO 0.
+	}
+} ELSE {
+	PRINT "Boostback S1? (y/n): ". SET input to terminal:input:getchar().
+	IF input = "y" {
+		SET BOOSTBACK TO 1.
+	} ELSE {
+		SET BOOSTBACK TO 0.
+	}
+}
+
+IF LAUNCH = 1 {
+	PRINT "Enter apoapsis: ". SET AP TO terminal:input:getchar().
+	PRINT "Enter eccentricity: ". SET ECC TO terminal:input:getchar(). // Eccentricity: circular = 0, elliptical = [0,1], parabolic = 1, hyperbolic > 1
+	PRINT "Enter inclination: ". SET INCL TO terminal:input:getchar(). // 0 = due north, 90 = east, 180 = south, etc.
+}
+
+PRINT "Recover S1? (y/n): ". SET input TO terminal:input:getchar().
+IF input = "y" {
+	SET EXPEND TO 0.
+} ELSE {
+	SET EXPEND TO 1. { SET MODE TO "EXPENDABLE". } // Expendable mode
 
 // Vehicle
-SET ENGINEMODES TO 1. // Does the engine have modes?
-SET MODESWITCH TO 0. // Allow switching from RTLS to ASDS
-SET EXPEND TO 0. IF EXPEND = 1 { SET MODE TO "EXPENDABLE". } // Expendable mode
+IF EXPEND = 0 {
+	PRINT "Does the engine have modes? (y/n): ". SET input TO terminal:input:getchar(). 
+	IF input = "y" { 
+		SET ENGINEMODES TO 1. 
+	} ELSE {
+		SET ENGINEMODES TO 0.
+	}
+
+	PRINT "Allow switching from RTLS to ASDS? (y/n): ". SET input TO terminal:input:getchar().
+	IF input = "y" {
+		SET MODESWITCH TO 1. // Allow switching from RTLS to ASDS
+	} ELSE {
+		SET MODESWITCH TO 0.
+	}
+}
 
 // Debug? (Suppresses OUTPUT())
 SET DEBUG TO 1.
@@ -35,7 +74,7 @@ SET g TO 9.80665.
 IF LAUNCH = 1 {
 	SET h TO ALT:RADAR*0.75.
 } ELSE {
-	SET h TO 27.
+	PRINT "Enter the approx height of S1 (meters): ". SET h TO terminal:input:getchar().
 }
 
 // Start MET, fuel consumption, initialise some values
