@@ -157,10 +157,10 @@ function trueMaxAcceleration {
 	//SET dv1 TO SQRT(2*g*(ALT:RADAR-h)+SHIP:VERTICALSPEED^2). 
 	SET t_impact TO ABS(targeted:DISTANCE/SHIP:AIRSPEED). 
 	SET dv TO SHIP:AIRSPEED. // SET dv TO SHIP:GROUNDSPEED + ABS(SHIP:VERTICALSPEED) + g/t_impact.
-	SET finalMass TO (initialmass*constant:e^(-dv/(ISP*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)))). // Mass after we've burned off specified dv
+	SET finalMass TO (initialmass*constant:e^(-dv/(ISP*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)))). 
 	SET burntime TO ((initialmass-finalMass)/mfrate). // Time required for above dv burn
 	SET gdv TO ((SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)*burntime). // How much gravity fucks us over
-	SET trueMass TO (initialmass*constant:e^(-(dv+gdv)/(ISP*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)))). // Account for losses due to g
+	SET trueMass TO (initialmass*constant:e^(-(dv+gdv)/(ISP*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)))). 
 	
 	// Average maximum acceleration calculation.
 	//SET a1 TO ((SHIP:AVAILABLETHRUST/SHIP:MASS)-g).
@@ -213,7 +213,7 @@ function control {
 		} ELSE {
 			SET TOGGLING TO 2.5.
 		}
-		IF TOGGLING*xOffsetMEM1 > xOffsetMEM0 AND THROTT > 0 { // Propulsive force > aerodynamic forces; switch to propulsive guidance; 2.5 --> 2 --> 1.25
+		IF TOGGLING*xOffsetMEM1 > xOffsetMEM0 AND THROTT > 0 { // Propulsive force > aerodynamic forces
 			SET dir TO 1.
 			SET t1 TO TIME:SECONDS + 9999. // Never update again
 		}
@@ -222,9 +222,9 @@ function control {
 	// Set multipliers
 	IF ALT:RADAR > 4000 {
 		IF MODE = "RTLS" {
-			SET dCoe TO 18. // 6 --> 5 --> 8 --> 10 --> 14 --> 18 in an attempt to minimise final approach sway. 14 works pretty great.
+			SET dCoe TO 20. // 6 --> 5 --> 8 --> 10 --> 14 --> 18 in an attempt to minimise final approach sway.
 		} ELSE {
-			SET dCoe TO 20. // 8 --> 6 --> 8 --> 4 Dropped back to four after a substantial increase above
+			SET dCoe TO 30. // 8 --> 6 --> 8 --> 4 Dropped back to four after a substantial increase above
 			}
 	} ELSE {
 		IF MODE = "RTLS" {
@@ -670,10 +670,10 @@ function MECOconnect {
 
 function targetOvershoot {
 	IF MODE = "RTLS" {
-		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/8.25. // In degrees, /2.5 --> /3 --> /4.5 --> /8
+		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/8.25. 
 		SET targeted TO LATLNG(target0:LAT, target0:LNG - overshoot). // - for RTLS overshoot, + for ASDS
 	} ELSE {
-		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/4. // In degrees, 360/20 --> 
+		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/4. 
 		SET targeted TO LATLNG(target0:LAT, target0:LNG + overshoot). // 
 	}
 }
