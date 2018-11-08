@@ -1,5 +1,6 @@
-// Asteria v1.3.1
-// Created by 0x12e
+// Asteria
+// kOS-based guidance script for Kerbal Space Program
+// Made with hate and pure agony by 0x12e
 
 // Version history
 // 0.01: 2018/02/13
@@ -8,11 +9,34 @@
 // 1.0b4 2018/06/08
 // 1.2 2018/07/20
 // 1.3 2018/09/14
-// 1.3.1 2018/10
+// 1.31 2018/10
+// 1.32 2018/11
+
+// ORBIT PARAMETERS
+SET AP TO 350000.
+SET ECC TO 0. // Eccentricity: circular = 0, elliptical = [0,1], parabolic = 1, hyperbolic > 1
+SET INCL TO 90. // 0 = due north, 90 = east, 180 = south, etc.
+
+// LAUNCH PARAMETERS
+SET LAUNCH TO 1.
+SET BOOSTBACK TO 1.
+SET S2GUIDANCE TO 1.
+
+// Vehicle
+SET ENGINEMODES TO 1. // Does the engine have modes?
+SET MODESWITCH TO 0. // Allow switching from RTLS to ASDS
+SET EXPEND TO 0. IF EXPEND = 1 { SET MODE TO "EXPENDABLE". } // Expendable mode
+
+// Debug? (Suppresses OUTPUT())
+SET DEBUG TO 1.
 
 // Define constants.
-SET h TO ALT:RADAR*0.75.
 SET g TO 9.80665.
+IF LAUNCH = 1 {
+	SET h TO ALT:RADAR*0.75.
+} ELSE {
+	SET h TO 27.
+}
 
 // Start MET, fuel consumption, initialise some values
 SET t0ref TO TIME:SECONDS.
@@ -24,8 +48,6 @@ SET recov_lf TO 0.
 SET tInterval TO 0.
 SET BURN TO 0.
 SET outputinitialisation TO TRUE.
-
-// Required for the output function to work, so they're declared here.
 SET propulsive_landing TO 0.
 SET entryburnstart TO 0.
 SET entryburnend TO 0.
@@ -42,11 +64,9 @@ SET MECO TO 0.
 // Mission status
 SET missionstatus TO "AWAITING LIFTOFF".
 
-// Throttle PID-loop inits
+// PID-loop and control function inits
 SET thrott_loop_initialised TO FALSE.
 SET flightThrottleInitialised TO FALSE.
-
-// Initialise control functions
 SET CONTROLINIT TO FALSE.
 SET CONTROLINITIALISED TO FALSE.
 SET bbinitialised TO FALSE.
@@ -54,40 +74,16 @@ SET bbinitialised TO FALSE.
 // Define some target positions, choose target by commenting out the line of code after the coordinates
 SET LZ1 TO LATLNG(-0.115551384009776,-74.5681799085477). //SET targeted TO LZ1. SET MODE to "RTLS".
 SET LZ2 TO LATLNG(-0.0970402811341319,-74.5397113868808). SET targeted TO LZ2. SET MODE to "RTLS".
-
 SET LPAD TO LATLNG(-0.0972030750580504,-74.5576793237724). //SET targeted TO LPAD. SET MODE to "RTLS".
 SET VAB1 TO LATLNG(-0.096779141835831,-74.6173961940554). //SET targeted TO VAB1. SET MODE to "RTLS".
 SET VAB2 TO LATLNG(-0.0967667872308891,-74.6200422643941). //SET targeted TO VAB2. SET MODE to "RTLS". SET h TO h + 100.
-
 SET TRCKST TO LATLNG(-0.127201122059944,-74.605370914838). //SET targeted TO TRCKST. SET MODE to "RTLS". 
 SET ASTRO TO LATLNG(-0.0925716174970505,-74.6630942590381). //SET targeted TO ASTRO. SET MODE TO "RTLS".
 SET RADAR TO LATLNG(-0.122499220824709,-74.6522854766593). //SET targeted TO RADAR. SET MODE TO "RTLS". SET h TO h + 35.
 SET POOL TO LATLNG(-0.0868689418624337,-74.6614596133055). //SET targeted TO POOL. SET MODE TO "RTLS".
 SET TRIANGLE TO LATLNG(-0.102062495776151,-74.6512243417649). //SET targeted TO TRIANGLE. SET MODE TO "RTLS".
 SET FLAGPOLE TO LATLNG(-0.0941386551432377,-74.6535134350793). //SET targeted TO FLAGPOLE. SET MODE TO "RTLS". SET h TO h + 50.
-
 SET OCISLY TO LATLNG(-0.319454412032009,-52.1849479434307). //SET targeted TO OCISLY. SET MODE TO "ASDS".
-
-// ORBIT PARAMETERS
-SET AP TO 350000.
-SET ECC TO 0. // Eccentricity: circular = 0, elliptical = [0,1], parabolic = 1, hyperbolic > 1
-SET INCL TO 90. // 0 = due north, 90 = east, 180 = south, etc.
-
-SET EXPEND TO 0. // Expendable mode
-IF EXPEND = 1 {
-	SET MODE TO "EXPENDABLE".
-}
-
-// LAUNCH PARAMETERS
-SET LAUNCH TO 1.
-SET BOOSTBACK TO 1.
-SET S2GUIDANCE TO 1.
-
-SET ENGINEMODES TO 1. // Does the engine have modes?
-SET MODESWITCH TO 0. // Allow switching from RTLS to ASDS
-
-// Debug? (Suppresses OUTPUT())
-SET DEBUG TO 1.
 
 // Set target
 ADDONS:TR:SETTARGET(targeted).
@@ -105,12 +101,10 @@ LOCK THROTTLE TO thrott.
 // Functions
 function getEngines {
 	IF LAUNCH = 1 AND SHIP:AVAILABLETHRUST = 0 {
-		STAGE.
-	}
+		STAGE. }
 
 	list engines in engineList.
 	set engine to engineList[0].
-
 	SET ISP TO engine:ISP.
 	IF ISP = 0 {
 		SET n TO 0.
@@ -128,7 +122,6 @@ function groundDist {
 	RETURN (POINT1:POSITION - POINT2:POSITION):MAG.
 }
 
-
 function groundDir {
 	PARAMETER POINT1.
 	PARAMETER POINT2.
@@ -142,7 +135,6 @@ function getaoa { // Angle of attack
 	SET star_tr_vec TO VCRS(up_vec,forw_tr_vec).
 	SET aoa_vec TO VXCL(star_tr_vec,SHIP:FACING:VECTOR).
 	SET aoa TO ABS(VANG(aoa_vec, forw_tr_vec )*pitch_factor).
-
 	RETURN aoa.
 }
 
@@ -182,7 +174,6 @@ function trueMaxAcceleration {
 	// Return maximum acceleration
 	RETURN amax.
 }
-
 
 function control {
 	IF EXPEND = 1 {
@@ -256,7 +247,6 @@ function control {
 	RETURN. 
 }
 
-
 function throttlePID {
 	// Kinetics
 	SET a TO (SHIP:AVAILABLETHRUST/SHIP:MASS). //*SIN(getaoa()). // Accounts for cosine losses during the burn.
@@ -286,8 +276,7 @@ function throttlePID {
 		SET throttOUT TO throttPID:OUTPUT.
 		SET thrott TO thrott + throttOUT.
 
-		SET thrott_loop_initialised TO TRUE.
-	}
+		SET thrott_loop_initialised TO TRUE. }
 
 	// Throttle PID
 	SET throttOUT TO throttPID:UPDATE(TIME:SECONDS, (t_impact - t_decelt)).
@@ -298,13 +287,11 @@ function throttlePID {
 		IF engine:MODE = "AllEngines" AND thrott < 0.45 AND ABS(t_impact) - ABS(t_decelt) > -1 { //0.45
 			engine:TOGGLEMODE.
 			WAIT 0.01.
-			SET thrott TO 0.75. // So that the loop notices a change in throttle
-		}
-	}
+			SET thrott TO 0.75. // So that the loop notices a change in throttle 
+		} }
 
 	RETURN.
 }
-
 
 function recdv { // Function calculates delta-v required for stage recovery, and returns said value in m/s
 	PARAMETER recoverytarget.
@@ -329,14 +316,12 @@ function recdv { // Function calculates delta-v required for stage recovery, and
 	// Assume constant acceleration
 	SET v_ff TO (SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)*t_apgFF.
 	SET rec_dv TO flyback_dv + v_ff.
-
 	RETURN rec_dv.
 }
 
 
 function reclf { // Function calculates liquid fuel expended on stage recovery, returning the amount of LF required in units
 	PARAMETER recoverytarget.
-
 	SET Isp TO engine:ISP.
 	IF Isp = 0 {
 		SET n TO 0.
@@ -344,15 +329,13 @@ function reclf { // Function calculates liquid fuel expended on stage recovery, 
 			SET engine TO engineList[n].
 			SET Isp TO engine:Isp.
 			SET n TO n + 1.
-		}
-	}
+		} }
 
 	SET initialmass TO 0.
 	FOR PART IN SHIP:PARTS {
 		IF PART:STAGE = STAGE:NUMBER OR PART:STAGE = STAGE:NUMBER-1 OR PART:STAGE = STAGE:NUMBER+1 {
 			SET initialmass TO initialmass + PART:MASS.
-		}
-	}
+		} }
 
 	SET mfrate TO SHIP:AVAILABLETHRUST/engine:ISP*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2).
 	SET dv TO recdv(recoverytarget).
@@ -369,11 +352,157 @@ function reclf { // Function calculates liquid fuel expended on stage recovery, 
 	RETURN dlf*1000. // dlf in tons? Who knows, but seems about right.
 }
 
+function launch {
+	// Calculate orbital dv
+	SET r TO AP + 600000. // Radius of kerbin + apoapsis + altitude
+	SET Mkerbin TO 5.2915158*10^22. // kg
+	SET const_G TO 6.674 * 10^(-11).
+	SET sma TO r + AP. // Circular orbit; sma = R + (AP+PA)/2
+	SET dvAP TO SQRT(const_G * Mkerbin *(2/r - 1/sma)). // Calculate dv from vis-viva equation
+
+	// Lock steering
+	SET steer TO SHIP:UP + R(0,0,270).
+	LOCK STEERING TO steer.
+
+	// LAUNCH
+	CLEARSCREEN.
+	SET voffset TO 0.
+	IF S2GUIDANCE = 1 {
+		PRINT "INITIALISING CONNECTION WITH S2".
+		S2connect().
+	}
+
+	WAIT 1.
+	PRINT "PROCEEDING WITH LAUNCH SEQUENCE".
+	PRINT "STARTING TERMINAL COUNT".
+
+	SET countdown TO 5.
+	UNTIL countdown < 0 {
+		PRINT countdown.
+		WAIT 1.
+		SET countdown TO countdown - 1.
+	}
+
+	PRINT "IGNITION".
+	SET thrott TO 100.
+	WAIT 1.5.
+	STAGE.
+	PRINT "LIFTOFF".
+	RCS ON.
+
+	SET missionstatus TO "FLYING".
+	//LOCK updir TO SHIP:UP + R(0,0,90).
+	//SET steer TO updir.
+
+	SET STEER TO HEADING(INCL,90).
+
+	SET t0 TO TIME:SECONDS.
+	SET t1 TO TIME:SECONDS + 2.
+
+	UNTIL ALT:RADAR > 200 {
+		SET t0 TO TIME:SECONDS.
+
+		IF t0 > t1 + 2 {
+			OUTPUT().
+			SET t1 TO TIME:SECONDS.
+		}
+	}
+
+	CLEARSCREEN.
+
+	UNTIL ALT:RADAR > 600 {
+		SET STEER TO HEADING(INCL,87). // 87
+
+		SET t0 TO TIME:SECONDS.
+		IF t0 > t1 + 2 {
+			OUTPUT().
+			SET t1 TO TIME:SECONDS.
+		}
+	}
+
+	UNTIL ALT:RADAR > 1000 {
+		SET STEER TO HEADING(INCL,84). // 85
+
+		SET t0 TO TIME:SECONDS.
+		IF t0 > t1 + 2 {
+			OUTPUT().
+			SET t1 TO TIME:SECONDS.
+		}
+	}
+
+	RCS OFF.
+	UNTIL SHIP:VERTICALSPEED > 200 {
+		SET STEER TO HEADING(INCL,83). // 84 (354 good for RTLS, 352 for ASDS)
+
+		SET t0 TO TIME:SECONDS.
+		IF t0 > t1 + 2 {
+			OUTPUT().
+			SET t1 TO TIME:SECONDS.
+		}
+	}
+
+	UNTIL SHIP:APOAPSIS > AP OR MECO = 1 {
+		SET steer TO SHIP:SRFPROGRADE. // Start gravity turn
+
+		SET t0 TO TIME:SECONDS.
+		IF t0 > t1 + 2 {
+			OUTPUT().
+			SET t1 TO TIME:SECONDS.
+		}
+
+		IF ALT:RADAR > 15000 {
+			SET recov_lf TO reclf(LZ1).
+			SET asdsrecov_lf TO reclf(OCISLY).
+			IF EXPEND = 0 {
+				IF (recov_lf*(5/9))*0.9 > STAGE:LIQUIDFUEL { // 1.25
+					//SET MECO TO 1. // IF RTLS ONLY
+					IF asdsrecov_lf < recov_lf AND MODESWITCH = 1 {
+						SET MECO TO 0.
+						SET targeted TO OCISLY. SET MODE TO "ASDS".
+					} ELSE {
+						SET MECO TO 1.
+					}
+				}
+			} ELSE {
+				IF STAGE:LIQUIDFUEL < 50 {
+					SET thrott TO 0.
+					SET MECO TO 1.
+				}
+			}
+		}
+	}
+
+	RCS ON.
+	SET thrott TO 0.
+	engine:SHUTDOWN.
+	WAIT 1.
+
+	SAS ON.
+	WAIT 0.5.
+	SET thrott TO 0.01.
+	WAIT 0.05.
+	STAGE.
+	SAS OFF.
+	SET thrott TO 0.
+
+	CLEARSCREEN.
+	IF S2GUIDANCE = 1 {
+		MECOconnect().
+	}
+
+	WAIT 1.
+
+	// Re-get engines
+	engine:ACTIVATE.
+	WAIT 1.
+	getEngines().
+	WAIT 3.
+}
+
 function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) and runs it
 	SET missionstatus TO "PERFORMING BOOSTBACK".
 	IF EXPEND = 1 {
-		RETURN.
-	}
+		RETURN. }
 
 	// Target acq.
 	LOCK targetDist TO groundDist(targeted, ADDONS:TR:IMPACTPOS).
@@ -390,30 +519,25 @@ function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) a
 		IF engine:MODE = "AllEngines" {
 			engine:TOGGLEMODE.
 			WAIT 0.01.
-		}
-	}
+		} }
 
-	LOCK throttle TO thrott.
 	SET thrott TO 0.2. // 0.1
 
 	IF MODE = "RTLS" {
-		SET bbangle TO 6. // 5 --> 6.5 --> 6
+		SET bbangle TO 6.5. // 5 --> 6.5 --> 6
 	} ELSE {
-		SET bbangle TO 1.5.
-	}
+		SET bbangle TO 1.5. }
 
 	// Orient vehicle for boostback
 	until VANG(HEADING(steeringDir,steeringPitch):VECTOR, SHIP:FACING:VECTOR) < bbangle { // 0.05 --> 0.25 --> 2.5 --> 3.5
-		SET steer TO HEADING(steeringDir, steeringPitch).
-	}
+		SET steer TO HEADING(steeringDir, steeringPitch). }
 
 	// All engines for the burn
 	IF ENGINEMODES = 1 AND groundDist(targeted, ADDONS:TR:IMPACTPOS()) > 10000 {
 		IF engine:MODE = "CenterOnly" {
 			engine:TOGGLEMODE.
 			WAIT 0.01.
-		}
-	}
+		} }
 
 	// Ground distance between target and impact position
 	SET dist TO groundDist(targeted, ADDONS:TR:IMPACTPOS()).
@@ -423,7 +547,7 @@ function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) a
 	IF dist > 10000 { // 10000
 		SET thrott TO 1.
 	} ELSE {
-		SET thrott TO 0.1. // 0.2
+		SET thrott TO 0.1. // 0.2 
 	}
 
 	IF ENGINEMODES = 1 {
@@ -432,46 +556,37 @@ function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) a
 				ENGINE:TOGGLEMODE.
 				WAIT 0.01.
 				SET thrott TO 0.1. // 0.05 --> 0.025
-			}
-		}
-	}
+			} } }
 
 	SET bbt0 TO TIME:SECONDS.
 	UNTIL dist < 50 OR distDelta > 0 {
 		IF TIME:SECONDS - bbt0 > 0.22 { // Update dist0 every 0.15/0.2/0.22 seconds, lower values seem to not work.
 			SET bbt0 TO TIME:SECONDS.
-			SET dist0 TO dist + 10.
-		}
+			SET dist0 TO dist + 10. }
 
 		LOCK targetDist TO groundDist(targeted, ADDONS:TR:IMPACTPOS).
 		LOCK targetDir TO groundDir(ADDONS:TR:IMPACTPOS, targeted).
 
 		IF targetDist < 5000 {
-			SET thrott TO 0.075.
-		}
+			SET thrott TO 0.075. }
 
 		// Calculate angle between impact position and target, if we are starting to get close
 		IF dist < 10000 AND MODE = "RTLS" {
 			SET xOffset TO (ADDONS:TR:IMPACTPOS:LNG - TARGETED:LNG).	
 			SET yOffset TO (ADDONS:TR:IMPACTPOS:LAT - TARGETED:LAT).
 			SET ALPHA TO ABS(ARCTAN(yOffset/xOffset)).
-			//PRINT "ALPHA: " + ALPHA.
-			//PRINT "DIST:" + targetDist.
 		}
 
 		IF dist < 10000 AND dist > 2000 AND MODE = "RTLS" {
 			SET steeringDir TO targetDir - (180+(ALPHA/2)). // Points towards target; (directly towards) - alpha
-			//PRINT "STEERING DIR: " + steeringDir.
 		} ELSE {
-			SET steeringDir TO targetDir - 180.
-		} 
+			SET steeringDir TO targetDir - 180. } 
 
 		SET steeringPitch to 0. // Boostback, so pitch = 0 for optimal burn.
 		SET steer TO HEADING(steeringDir, steeringPitch).
 
 		SET dist TO groundDist(targeted, ADDONS:TR:IMPACTPOS()).
-		SET distDelta TO dist - dist0.
-	}
+		SET distDelta TO dist - dist0. }
 
 	// Boostback performed, exit function
 	SET thrott TO 0.
@@ -555,7 +670,7 @@ function MECOconnect {
 
 function targetOvershoot {
 	IF MODE = "RTLS" {
-		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/8. // In degrees, /2.5 --> /3 --> /4.5 --> /8
+		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/8.25. // In degrees, /2.5 --> /3 --> /4.5 --> /8
 		SET targeted TO LATLNG(target0:LAT, target0:LNG - overshoot). // - for RTLS overshoot, + for ASDS
 	} ELSE {
 		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/4. // In degrees, 360/20 --> 
@@ -576,23 +691,16 @@ function output {
 		CLEARSCREEN.
 		SET outputinitialisation TO FALSE.
 		PRINT ".------------------------------------------------.".
-		PRINT "|ASTERIA v1.31                                    ".
+		PRINT "|ASTERIA v1.32                                    ".
 		PRINT "|LAUNCH AND RECOVERY GUIDANCE                     ".
 		PRINT "|---------------- MISSION STATUS ----------------.".
 		PRINT "|MET: " + round(TIME:SECONDS-t0ref,0) + " s".
 		PRINT "|STATUS: " + missionstatus.
 		PRINT "|RECOVERY: " + MODE.
-		//IF missionstatus = "GUIDING TOWARDS LANDING SITE" OR missionstatus = "STAGE 1 COAST" OR missionstatus = "LANDING BURN" {
-		//	SET freq TO (tInterval - t0)*1000.
-		//	IF freq < 5000 AND freq > -1 {
-		//		PRINT "|LOOP TIME: " + round(freq,0) + " ms".
-		//	}
-		//}
 		PRINT "|---------------- VEHICLE STATUS ---------------.".
 		PRINT "|ALTITUDE: " + round(ALT:RADAR/1000,1) + " km".
 		PRINT "|VELOCITY: " + round(SHIP:AIRSPEED,1) + " m/s".
 		PRINT "|APOAPSIS: " + round(SHIP:APOAPSIS/1000,2) + " km".
-		PRINT "|INCLINATION: " + round(SHIP:ORBIT:INCLINATION,2) + " deg".
 		PRINT "|TWR: " + round(twr,2).
 		PRINT "|Q: " + round(vesselq,2) + " atm".
 
@@ -640,13 +748,11 @@ function output {
 		PRINT round(ALT:RADAR/1000,1) + " km" AT (11,8).
 		PRINT round(SHIP:AIRSPEED,1) + " m/s" AT (11,9).
 		PRINT round(SHIP:APOAPSIS/1000,2) + " km" AT (11,10).
-		PRINT round(SHIP:ORBIT:INCLINATION,2) + " deg" AT (14,11).
-		PRINT round(twr,2) AT (6,12).
-		PRINT round(vesselq,2) + " atm" AT (4,13).
+		PRINT round(twr,2) AT (6,11).
+		PRINT round(vesselq,2) + " atm" AT (4,12).
 
 		SET t0output TO TIME:SECONDS.
 		IF t0output > t1output + 10 {
-			// Get loop time
 			SET outputinitialisation TO TRUE.
 		}
 	}
@@ -654,157 +760,14 @@ function output {
 	RETURN.
 }
 
-// Initialise vehicle
+// Initialise vehicle, launch
 getEngines().
-
 IF LAUNCH = 1 {
-	// Calculate orbital dv
-	SET r TO AP + 600000. // Radius of kerbin + apoapsis + altitude
-	SET Mkerbin TO 5.2915158*10^22. // kg
-	SET const_G TO 6.674 * 10^(-11).
-	SET sma TO r + AP. // Circular orbit; sma = R + (AP+PA)/2
-	SET dvAP TO SQRT(const_G * Mkerbin *(2/r - 1/sma)). // Calculate dv from vis-viva equation
-
-	// Lock steering
-	SET steer TO SHIP:UP + R(0,0,270).
-	LOCK STEERING TO steer.
-
-	// LAUNCH
-	CLEARSCREEN.
-	SET voffset TO 0.
-	IF S2GUIDANCE = 1 {
-		PRINT "INITIALISING CONNECTION WITH S2".
-		S2connect().
-	}
-
-	WAIT 1.
-	PRINT "PROCEEDING WITH LAUNCH SEQUENCE".
-	PRINT "STARTING TERMINAL COUNT".
-
-	SET countdown TO 5.
-	UNTIL countdown < 0 {
-		PRINT countdown.
-		WAIT 1.
-		SET countdown TO countdown - 1.
-	}
-
-	PRINT "IGNITION".
-	SET thrott TO 100.
-	WAIT 1.5.
-	STAGE.
-	PRINT "LIFTOFF".
-	RCS ON.
-
-	SET missionstatus TO "FLYING".
-	//LOCK updir TO SHIP:UP + R(0,0,90).
-	//SET steer TO updir.
-
-	SET STEER TO HEADING(INCL,90).
-
-	SET t0 TO TIME:SECONDS.
-	SET t1 TO TIME:SECONDS + 2.
-
-	UNTIL ALT:RADAR > 200 {
-		SET t0 TO TIME:SECONDS.
-
-		IF t0 > t1 + 2 {
-			OUTPUT().
-			SET t1 TO TIME:SECONDS.
-		}
-	}
-
-	UNTIL ALT:RADAR > 600 {
-		SET STEER TO HEADING(INCL,87). // 87
-
-		SET t0 TO TIME:SECONDS.
-		IF t0 > t1 + 2 {
-			OUTPUT().
-			SET t1 TO TIME:SECONDS.
-		}
-	}
-
-	UNTIL ALT:RADAR > 1000 {
-		SET STEER TO HEADING(INCL,84). // 85
-
-		SET t0 TO TIME:SECONDS.
-		IF t0 > t1 + 2 {
-			OUTPUT().
-			SET t1 TO TIME:SECONDS.
-		}
-	}
-
-	RCS OFF.
-	UNTIL SHIP:VERTICALSPEED > 200 {
-		SET STEER TO HEADING(INCL,83). // 84 (354 good for RTLS, 352 for ASDS)
-
-		SET t0 TO TIME:SECONDS.
-		IF t0 > t1 + 2 {
-			OUTPUT().
-			SET t1 TO TIME:SECONDS.
-		}
-	}
-
-	UNTIL SHIP:APOAPSIS > AP OR MECO = 1 {
-		SET steer TO SHIP:SRFPROGRADE. // Start gravity turn
-
-		SET t0 TO TIME:SECONDS.
-		IF t0 > t1 + 2 {
-			OUTPUT().
-			SET t1 TO TIME:SECONDS.
-		}
-
-		IF ALT:RADAR > 15000 {
-			SET recov_lf TO reclf(LZ1).
-			SET asdsrecov_lf TO reclf(OCISLY).
-			IF EXPEND = 0 {
-				IF (recov_lf*(5/9)) > STAGE:LIQUIDFUEL { // 1.25
-					//SET MECO TO 1. // IF RTLS ONLY
-					IF asdsrecov_lf < recov_lf AND MODESWITCH = 1 {
-						SET MECO TO 0.
-						SET targeted TO OCISLY. SET MODE TO "ASDS".
-					} ELSE {
-						SET MECO TO 1.
-					}
-				}
-			} ELSE {
-				IF STAGE:LIQUIDFUEL < 50 {
-					SET thrott TO 0.
-					SET MECO TO 1.
-				}
-			}
-		}
-	}
-
-	RCS ON.
-	SET thrott TO 0.
-	engine:SHUTDOWN.
-	WAIT 1.
-
-	SAS ON.
-	WAIT 0.5.
-	SET thrott TO 0.01.
-	WAIT 0.05.
-	STAGE.
-	SAS OFF.
-	SET thrott TO 0.
-
-	CLEARSCREEN.
-	IF S2GUIDANCE = 1 {
-		MECOconnect().
-	}
-
-	WAIT 1.
-
-	// Re-get engines
-	engine:ACTIVATE.
-	WAIT 1.
-	getEngines().
-	WAIT 3.
+	launch().
 }
 
+// Post-launch
 SET lf2 TO STAGE:LIQUIDFUEL.
-
-// Brakes on, RCS on, SAS off
 BRAKES ON.
 RCS ON.
 SAS OFF.
@@ -818,10 +781,6 @@ IF EXPEND = 1 {
 	SET MODE TO "EXPEND".
 }
 
-//
-// Boostback
-OUTPUT().
-
 // Overshoot target
 IF MODE = "ASDS" {
 	SET target0 TO targeted.
@@ -829,14 +788,14 @@ IF MODE = "ASDS" {
 }
 
 IF BOOSTBACK = 1 {
+	OUTPUT().
 	run_boostback().
 }
 
-//
 RCS ON.
 SET initialmass TO SHIP:MASS.
-SET steer TO ADDONS:TR:CORRECTEDVEC.
-LOCK STEERING TO steer.
+SET steer TO ADDONS:TR:CORRECTEDVEC. LOCK STEERING TO steer.
+SET thrott TO 0. LOCK THROTTLE TO thrott.
 
 // Get engines again
 CLEARSCREEN.
@@ -876,9 +835,6 @@ IF MODE = "RTLS" {
 	}
 }
 
-//RCS OFF.
-LOCK THROTTLE TO thrott.
-SET thrott TO 0.
 
 // 8/2.2/2.2 for first landing.
 SET STEERINGMANAGER:MAXSTOPPINGTIME TO 12. // 4 --> 5
@@ -886,15 +842,12 @@ SET STEERINGMANAGER:PITCHPID:KD TO 1.1.
 SET STEERINGMANAGER:YAWPID:KD TO 1.1.
 SET STEERINGMANAGER:PITCHPID:KP TO 2.4.
 SET STEERINGMANAGER:YAWPID:KP TO 2.4.
-//SET STEERINGMANAGER:PITCHPID:KI TO 2.4.
-//SET STEERINGMANAGER:YAWPID:KI TO 2.4.
 
 IF CONTROLINITIALISED = FALSE {
 	SET CONTROLINITIALISED TO TRUE.
 }
 
 SET missionstatus TO "GUIDING TOWARDS LANDING SITE".
-
 SET entryaoa TO getaoa().
 SET tInterval TO TIME:SECONDS.
 SET t0 TO TIME:SECONDS.
@@ -909,22 +862,16 @@ WHEN ALT:RADAR < 65000 THEN {
 	SET STEERINGMANAGER:PITCHPID:KP TO 1.95. // 1.9
 }
 
-WHEN ALT:RADAR < 27500 THEN {
-	//RCS OFF.
-}
-
 WHEN ALT:RADAR < h+45 THEN { // 70 --> 50 --> 70 --> 100 --> 120
 	SET throttPID:SETPOINT TO -0.6. // --> -0.9 --> -1.0 --> -0.85
-	SET thrott TO thrott + 0.075.
+	SET thrott TO thrott + 0.1.
 } 
 
 IF MODE = "ASDS" {
 	WHEN ALT:RADAR < 3500 THEN {
 		SET targeted TO target0.
 	}
-}
-
-IF MODE = "RTLS" {
+} ELSE {
 	SET target0 TO targeted.
 	targetOvershoot().
 }
@@ -953,29 +900,16 @@ UNTIL BURN = 1 OR EXPEND = 1 {
 		}
 	} 
 
-	// Debug logs
-	CLEARSCREEN.
-	PRINT "TARGET DISTANCE: " + round(targeted:DISTANCE,0).
-	PRINT "AIRSPEED: " + round(SHIP:AIRSPEED,0).
-	PRINT "MAX ACCELERATION: " + round(a_max,0).
-	PRINT "------------------".
-	PRINT "IMPACT TIME: " + round(t_impact,1).
-	PRINT "DECELERATION TIME: " + round(t_decel,1).
-	PRINT "BURN START 1 (at 0): " + round(2*t_impact - t_decel,1).
-	PRINT "BURN START 2 (at 0): " + round(t_impact - t_decel,1).
-
 	// Control
 	control().
 
 	// Entry burn - performed if Q goes above threshold.
 	IF ALT:RADAR > 22000 AND SHIP:DYNAMICPRESSURE > 0.3 AND mode = "RTLS" { // Q changed from 0.35 to 0.275.
-		entryBurn().
-	}
+		entryBurn(). }
 
 	IF ALT:RADAR > 15000 AND ALT:RADAR < 10000 {
 		SET approxlf TO reclf(TARGETED).
-		SET landinglf0 TO STAGE:LIQUIDFUEL.
-	}
+		SET landinglf0 TO STAGE:LIQUIDFUEL. }
 
 
 	// Refresh console every 3 seconds
@@ -994,7 +928,7 @@ UNTIL BURN = 1 OR EXPEND = 1 {
 
 
 // Gear deployment
-WHEN (ALT:RADAR < 380) AND (GEAR = FALSE) THEN { // Previously 380, worked just fine but now engages higher.
+WHEN (ALT:RADAR < 400) AND (GEAR = FALSE) THEN { 
 	GEAR ON.
 	SET geardeploy TO 1.
 	OUTPUT().
@@ -1004,7 +938,6 @@ WHEN (ALT:RADAR < 380) AND (GEAR = FALSE) THEN { // Previously 380, worked just 
 SET targeted TO target0.
 SET t0 TO TIME:SECONDS.
 SET t1 TO t0 + 2.
-
 SET thrott TO 1. // Manual engine startup
 UNTIL SHIP:STATUS = "LANDED" OR EXPEND = 1 {
 	// Time for prints
@@ -1028,53 +961,27 @@ UNTIL SHIP:STATUS = "LANDED" OR EXPEND = 1 {
 	}
 }
 
-RCS ON.
-SAS ON.
-
-// RECOVERY ACCURACY
-//IF landinglf0 > 0 {
-//	SET landinglf1 TO STAGE:LIQUIDFUEL.
-//	SET landinglf TO landinglf0 - landinglf1.
-//}
-
-// -------------------------------------------------
 // If we've touched down, do post-landing operations.
 IF SHIP:STATUS = "LANDED" OR SHIP:VERTICALSPEED >= 0 {
+	RCS ON.
+	SAS ON.
 	SET missionstatus TO "LANDED".
 
 	SET thrott TO 0.
 	FOR engine IN engineList {
-		engine:SHUTDOWN.
-	}
+		engine:SHUTDOWN. }
 
 	SET landed TO 1.
+	BRAKES OFF.
 
 	WAIT 4.
 	OUTPUT().
 
-	RCS ON.
-	BRAKES OFF.
-	SAS OFF.
-
 	SET postlanding TO 1.
 	OUTPUT().
 
-	//PRINT "CALCULATED FUEL CONSUMPTION: " + round(approxlf,0) + " UNITS".
-	//PRINT "ACTUAL FUEL CONSUMPTION: " + round(landinglf,0) + " UNITS".
-	//PRINT "% USED OF CALCULATIONS: " + round((100*(landinglf/approxlf)),2) + " %".
-
-	//PRINT ".------------------------------------------------.".
-	//PRINT "> MONOPROPELLANT DEPLETION STARTED.".
-
-	//UNTIL SHIP:MONOPROPELLANT = 0 {
-	//	WAIT 1.
-	//}
-
-	//PRINT ".------------------------------------------------.".
-	//PRINT "> Depletion completed.".
-
 	PRINT ".------------------------------------------------.".
-	//PRINT "Thank you for flying with Asteria!".
+	PRINT "Thank you for flying with Asteria!".
 	PRINT "Exiting program.".
 }
 
