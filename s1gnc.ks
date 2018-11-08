@@ -12,6 +12,14 @@
 // 1.31 2018/10
 // 1.32 2018/11
 
+SET LAUNCH TO 0.
+SET BOOSTBACK TO 0.
+SET S2GNC TO 0.
+SET EXPEND TO 0.
+SET ENGINEMODES TO 0.
+SET MODESWITCH TO 0.
+
+CLEARSCREEN.
 // ORBIT PARAMETERS
 IF ALT:RADAR < 1000 {
 	PRINT "Perform a full launch? (y/n): ". SET input TO terminal:input:getchar().
@@ -38,9 +46,9 @@ IF ALT:RADAR < 1000 {
 }
 
 IF LAUNCH = 1 {
-	PRINT "Enter apoapsis: ". SET AP TO terminal:input:getchar().
-	PRINT "Enter eccentricity: ". SET ECC TO terminal:input:getchar(). 
-	PRINT "Enter inclination: ". SET INCL TO terminal:input:getchar(). 
+	PRINT "Enter apoapsis: ". SET AP TO 300000. //terminal:input:getchar().
+	PRINT "Enter eccentricity: ". SET ECC TO 0. //terminal:input:getchar(). 
+	PRINT "Enter inclination: ". SET INCL TO 90. //terminal:input:getchar(). 
 }
 
 PRINT "Recover S1? (y/n): ". SET input TO terminal:input:getchar().
@@ -141,7 +149,8 @@ LOCK THROTTLE TO thrott.
 // Functions
 function getEngines {
 	IF LAUNCH = 1 AND SHIP:AVAILABLETHRUST = 0 {
-		STAGE. }
+		STAGE. 
+	}
 
 	list engines in engineList.
 	set engine to engineList[0].
@@ -392,7 +401,7 @@ function reclf { // Function calculates liquid fuel expended on stage recovery, 
 	RETURN dlf*1000. // dlf in tons? Who knows, but seems about right.
 }
 
-function launch {
+function launch_vessel {
 	// Calculate orbital dv
 	SET r TO AP + 600000. // Radius of kerbin + apoapsis + altitude
 	SET Mkerbin TO 5.2915158*10^22. // kg
@@ -815,7 +824,7 @@ function output {
 // Initialise vehicle, launch
 getEngines().
 IF LAUNCH = 1 {
-	launch().
+	launch_vessel().
 }
 
 // Post-launch
@@ -1037,5 +1046,3 @@ IF SHIP:STATUS = "LANDED" OR SHIP:VERTICALSPEED >= 0 {
 	PRINT "Thank you for flying with Asteria!".
 	PRINT "Exiting program.".
 }
-
-// End of file.
