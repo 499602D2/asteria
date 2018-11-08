@@ -11,6 +11,7 @@
 // 1.3 2018/09/14
 // 1.31 2018/10
 // 1.32 2018/11
+// 1.33 2018/11
 
 // TO DO:
 // Fix orbital insertion/periapsis lifting
@@ -807,7 +808,7 @@ function output {
 		CLEARSCREEN.
 		SET outputinitialisation TO FALSE.
 		PRINT ".------------------------------------------------.".
-		PRINT "|ASTERIA v1.32                                    ".
+		PRINT "|ASTERIA v1.33                                    ".
 		PRINT "|LAUNCH AND RECOVERY GUIDANCE                     ".
 		PRINT "|---------------- MISSION STATUS ----------------.".
 		PRINT "|MET: " + round(TIME:SECONDS-t0ref,0) + " s".
