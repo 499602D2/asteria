@@ -47,7 +47,8 @@ PRINT "Recover S1? (y/n): ". SET input TO terminal:input:getchar().
 IF input = "y" {
 	SET EXPEND TO 0.
 } ELSE {
-	SET EXPEND TO 1. { SET MODE TO "EXPENDABLE". } // Expendable mode
+	SET EXPEND TO 1. SET MODE TO "EXPENDABLE". // Expendable mode
+}
 
 // Vehicle
 IF EXPEND = 0 {
@@ -536,12 +537,15 @@ function launch {
 	WAIT 1.
 	getEngines().
 	WAIT 3.
+
+	RETURN.
 }
 
 function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) and runs it
 	SET missionstatus TO "PERFORMING BOOSTBACK".
 	IF EXPEND = 1 {
-		RETURN. }
+		RETURN. 
+	}
 
 	// Target acq.
 	LOCK targetDist TO groundDist(targeted, ADDONS:TR:IMPACTPOS).
@@ -558,7 +562,8 @@ function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) a
 		IF engine:MODE = "AllEngines" {
 			engine:TOGGLEMODE.
 			WAIT 0.01.
-		} }
+		} 
+	}
 
 	SET thrott TO 0.2. // 0.1
 
@@ -569,14 +574,16 @@ function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) a
 
 	// Orient vehicle for boostback
 	until VANG(HEADING(steeringDir,steeringPitch):VECTOR, SHIP:FACING:VECTOR) < bbangle { // 0.05 --> 0.25 --> 2.5 --> 3.5
-		SET steer TO HEADING(steeringDir, steeringPitch). }
+		SET steer TO HEADING(steeringDir, steeringPitch). 
+	}
 
 	// All engines for the burn
 	IF ENGINEMODES = 1 AND groundDist(targeted, ADDONS:TR:IMPACTPOS()) > 10000 {
 		IF engine:MODE = "CenterOnly" {
 			engine:TOGGLEMODE.
 			WAIT 0.01.
-		} }
+		} 
+	}
 
 	// Ground distance between target and impact position
 	SET dist TO groundDist(targeted, ADDONS:TR:IMPACTPOS()).
@@ -595,19 +602,23 @@ function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) a
 				ENGINE:TOGGLEMODE.
 				WAIT 0.01.
 				SET thrott TO 0.1. // 0.05 --> 0.025
-			} } }
+			} 
+		} 
+	}
 
 	SET bbt0 TO TIME:SECONDS.
 	UNTIL dist < 50 OR distDelta > 0 {
 		IF TIME:SECONDS - bbt0 > 0.22 { // Update dist0 every 0.15/0.2/0.22 seconds, lower values seem to not work.
 			SET bbt0 TO TIME:SECONDS.
-			SET dist0 TO dist + 10. }
+			SET dist0 TO dist + 10. 
+		}
 
 		LOCK targetDist TO groundDist(targeted, ADDONS:TR:IMPACTPOS).
 		LOCK targetDir TO groundDir(ADDONS:TR:IMPACTPOS, targeted).
 
 		IF targetDist < 5000 {
-			SET thrott TO 0.075. }
+			SET thrott TO 0.075. 
+		}
 
 		// Calculate angle between impact position and target, if we are starting to get close
 		IF dist < 10000 AND MODE = "RTLS" {
@@ -619,13 +630,15 @@ function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) a
 		IF dist < 10000 AND dist > 2000 AND MODE = "RTLS" {
 			SET steeringDir TO targetDir - (180+(ALPHA/2)). // Points towards target; (directly towards) - alpha
 		} ELSE {
-			SET steeringDir TO targetDir - 180. } 
+			SET steeringDir TO targetDir - 180. 
+		} 
 
 		SET steeringPitch to 0. // Boostback, so pitch = 0 for optimal burn.
 		SET steer TO HEADING(steeringDir, steeringPitch).
 
 		SET dist TO groundDist(targeted, ADDONS:TR:IMPACTPOS()).
-		SET distDelta TO dist - dist0. }
+		SET distDelta TO dist - dist0. 
+	}
 
 	// Boostback performed, exit function
 	SET thrott TO 0.
@@ -1008,7 +1021,8 @@ IF SHIP:STATUS = "LANDED" OR SHIP:VERTICALSPEED >= 0 {
 
 	SET thrott TO 0.
 	FOR engine IN engineList {
-		engine:SHUTDOWN. }
+		engine:SHUTDOWN. 
+	}
 
 	SET landed TO 1.
 	BRAKES OFF.
