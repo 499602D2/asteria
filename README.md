@@ -18,12 +18,13 @@ You _must_ have the following mods installed:
 - Trajectories
 - kOS
 
-### Modifying the file
-- At the top of the file, specify your desired orbit by modifying apoapsis(AP), inclination(INC), and eccentricity(ECC).
-- Specify whether your engines support multiple modes; right click the engines to find out (e.g. Falcon 9's engine modes)
-- Specify the launch options (1 = true, 0 = false): launch, boostback, s2guidance, modeswitch (autotransfer from RTLS to ASDS)
-
 ### Running
 - Place the s1gnc and s2gnc files into /Ships/Script in your KSP installation folder.
 - Open the Trajectories mod's menu and set entry to retrograde
 - Open the kOS terminals for both S1 and S2. Type `switch to 0. run s1gnc.` in the S1 terminal, and `switch to 0. run s2gnc.` in the S2 terminal.
+- Enter the run parameters into the terminal as the program asks for them, by simply typing the response and hitting enter afterwards. To cancel the execution, press ctrl+c.
+
+### Common errors and fixes
+- _S1 crashes into S2:_ add a kOS terminal to S2 and run the s2gnc.ks program in it. Also set S2 guidance to enabled.
+- _Stage doesn't seem to control itself for landing:_ add regular steerable fins or grid fins.
+- _Stage crashes into the ground:_ lower the aggressiveness. 
