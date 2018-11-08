@@ -4,7 +4,7 @@ Asteria — kOS launch and landing guidance for Kerbal Space Program
 ### What is this?
 Asteria is a kOS script capable of launching a two-staged craft to any specified orbit and recovering the first stage via RTLS or a downrange ASDS landing. The script performs a suicide burn, minimising fuel use and thus maximizing available delta-v.
 
-### Quickstart
+### Before running
 Your craft must have the following specifications:
 - Grid fins and landing legs on S1 (don't use airbrakes - if you don't have grid fins, use regular fins)
 - A kOS terminal on both S1 and S2
