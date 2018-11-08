@@ -12,79 +12,19 @@
 // 1.31 2018/10
 // 1.32 2018/11
 
-SET LAUNCH TO 0.
-SET BOOSTBACK TO 0.
-SET S2GNC TO 0.
-SET EXPEND TO 0.
-SET ENGINEMODES TO 0.
-SET MODESWITCH TO 0.
-
 CLEARSCREEN.
-// ORBIT PARAMETERS
-IF ALT:RADAR < 1000 {
-	PRINT "Perform a full launch? (y/n): ". SET input TO terminal:input:getchar().
-	IF input = "y" {
-		SET LAUNCH TO 1.
-		SET BOOSTBACK TO 1.
-	} ELSE {
-		SET LAUNCH TO 0.
-	}
+PRINT "WELCOME TO ASTERIA!".
+PRINT "STARTING VEHICLE CONFIGURATION".
+WAIT 2.
+CLEARSCREEN.
 
-	PRINT "Run S2 guidance? (y/n): ". SET input to terminal:input:getchar().
-	IF input = "y" {
-		SET S2GUIDANCE TO 1.
-	} ELSE {
-		SET S2GUIDANCE TO 0.
-	}
-} ELSE {
-	PRINT "Boostback S1? (y/n): ". SET input to terminal:input:getchar().
-	IF input = "y" {
-		SET BOOSTBACK TO 1.
-	} ELSE {
-		SET BOOSTBACK TO 0.
-	}
-}
-
-IF LAUNCH = 1 {
-	PRINT "Enter apoapsis: ". SET AP TO 300000. //terminal:input:getchar().
-	PRINT "Enter eccentricity: ". SET ECC TO 0. //terminal:input:getchar(). 
-	PRINT "Enter inclination: ". SET INCL TO 90. //terminal:input:getchar(). 
-}
-
-PRINT "Recover S1? (y/n): ". SET input TO terminal:input:getchar().
-IF input = "y" {
-	SET EXPEND TO 0.
-} ELSE {
-	SET EXPEND TO 1. SET MODE TO "EXPENDABLE". // Expendable mode
-}
-
-// Vehicle
-IF EXPEND = 0 {
-	PRINT "Does the engine have modes? (y/n): ". SET input TO terminal:input:getchar(). 
-	IF input = "y" { 
-		SET ENGINEMODES TO 1. 
-	} ELSE {
-		SET ENGINEMODES TO 0.
-	}
-
-	PRINT "Allow switching from RTLS to ASDS? (y/n): ". SET input TO terminal:input:getchar().
-	IF input = "y" {
-		SET MODESWITCH TO 1. // Allow switching from RTLS to ASDS
-	} ELSE {
-		SET MODESWITCH TO 0.
-	}
-}
+vehicle_config().
 
 // Debug? (Suppresses OUTPUT())
 SET DEBUG TO 1.
 
 // Define constants.
 SET g TO 9.80665.
-IF LAUNCH = 1 {
-	SET h TO ALT:RADAR*0.75.
-} ELSE {
-	PRINT "Enter the approx height of S1 (meters): ". SET h TO terminal:input:getchar().
-}
 
 // Start MET, fuel consumption, initialise some values
 SET t0ref TO TIME:SECONDS.
@@ -147,6 +87,110 @@ SET thrott TO 0.
 LOCK THROTTLE TO thrott.
 
 // Functions
+function read_input {
+	PARAMETER ORBPARAM.
+	PARAMETER LINENUM.
+	LOCAL read IS "".
+	LOCAL input IS 0.
+
+	UNTIL input = terminal:input:enter {
+		SET input TO terminal:input:getchar().
+		SET read TO read + input.
+		IF ORBPARAM = "AP" {
+			PRINT read AT (16,LINENUM).
+		} ELSE IF ORBPARAM = "ECC" {
+			PRINT read AT (20,LINENUM).
+		} ELSE IF ORBPARAM = "INCL" {
+			PRINT read AT (19,LINENUM).
+		} ELSE IF ORBPARAM = "HEIGHT" {
+			PRINT read AT (40,LINENUM).
+		}
+	}
+	RETURN read:tonumber().
+}
+
+function vehicle_config {
+	// ORBIT PARAMETERS
+	SET LINENUM TO 0.
+	IF ALT:RADAR < 1000 {
+		PRINT "Perform a full launch? (y/n): ". 
+		SET input to terminal:input:getchar().
+		PRINT input AT (30,LINENUM).
+		IF input = "y" {
+			SET LAUNCH TO 1.
+			SET BOOSTBACK TO 1.
+		} ELSE {
+			SET LAUNCH TO 0.
+		} SET LINENUM TO LINENUM + 1.
+
+		PRINT "Run S2 guidance? (y/n): ". 
+		SET input to terminal:input:getchar(). // line 1
+		PRINT input AT (24,LINENUM).
+		IF input = "y" {
+			SET S2GUIDANCE TO 1.
+		} ELSE {
+			SET S2GUIDANCE TO 0.
+		} SET LINENUM TO LINENUM + 1.
+	} ELSE {
+		PRINT "Boostback S1? (y/n): ". 
+		SET input to terminal:input:getchar(). // line 2
+		PRINT input AT (21,LINENUM).
+		IF input = "y" {
+			SET BOOSTBACK TO 1.
+		} ELSE {
+			SET BOOSTBACK TO 0.
+		} SET LINENUM TO LINENUM + 1.
+	}
+
+	IF LAUNCH = 1 {
+		PRINT "Enter apoapsis: ". SET AP TO read_input("AP",LINENUM). SET LINENUM TO LINENUM + 1. // line 3
+		PRINT "Enter eccentricity: ". SET ECC TO read_input("ECC",LINENUM). SET LINENUM TO LINENUM + 1. // line 4
+		PRINT "Enter inclination: ". SET INCL TO read_input("INCL",LINENUM). SET LINENUM TO LINENUM + 1.  // line 5
+	}
+
+	PRINT "Recover S1? (y/n): ". 
+	SET input to terminal:input:getchar(). // line 3 or 6
+	PRINT input AT (19,LINENUM).
+	IF input = "y" {
+		SET EXPEND TO 0.
+	} ELSE {
+		SET EXPEND TO 1. SET MODE TO "EXPENDABLE". // Expendable mode
+	} SET LINENUM TO LINENUM + 1.
+
+	// Vehicle
+	IF EXPEND = 0 {
+		PRINT "Does the engine have modes? (y/n): ". 
+		SET input to terminal:input:getchar().
+		PRINT input AT (35,LINENUM).
+		IF input = "y" { 
+			SET ENGINEMODES TO 1. 
+		} ELSE {
+			SET ENGINEMODES TO 0.
+		} SET LINENUM TO LINENUM + 1.
+
+		PRINT "Allow switching from RTLS to ASDS? (y/n): ".
+		SET input to terminal:input:getchar().
+		PRINT input AT (42,LINENUM).
+		IF input = "y" {
+			SET MODESWITCH TO 1. // Allow switching from RTLS to ASDS
+		} ELSE {
+			SET MODESWITCH TO 0.
+		} SET LINENUM TO LINENUM + 1.
+	}
+
+	IF LAUNCH = 1 {
+		SET h TO ALT:RADAR*0.75.
+		PRINT "S1 height set to " + round(h,0) + " meters".
+	} ELSE {
+		PRINT "Enter the approx height of S1 (meters): ". 
+		SET h TO read_input("HEIGHT",LINENUM).
+	}
+
+	PRINT " ".
+	PRINT "VEHICLE CONFIGURATION COMPLETE. PROCEEDING.".
+	WAIT 2.
+}
+
 function getEngines {
 	IF LAUNCH = 1 AND SHIP:AVAILABLETHRUST = 0 {
 		STAGE. 
@@ -421,13 +465,14 @@ function launch_vessel {
 		S2connect().
 	}
 
-	WAIT 1.
+	WAIT 2.
+	CLEARSCREEN.
 	PRINT "PROCEEDING WITH LAUNCH SEQUENCE".
 	PRINT "STARTING TERMINAL COUNT".
 
 	SET countdown TO 5.
 	UNTIL countdown < 0 {
-		PRINT countdown.
+		PRINT "T- " + countdown.
 		WAIT 1.
 		SET countdown TO countdown - 1.
 	}
@@ -436,7 +481,7 @@ function launch_vessel {
 	SET thrott TO 100.
 	WAIT 1.5.
 	STAGE.
-	PRINT "LIFTOFF".
+	PRINT "LIFTOFF OF " + SHIP:NAME.
 	RCS ON.
 
 	SET missionstatus TO "FLYING".
