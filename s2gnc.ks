@@ -66,34 +66,28 @@ function gnc {
 	RCS ON.
 	SAS OFF.
 
-	// Periapsis from eccentricity and apoapsis
-	//SET PE TO (-ecc*Ap+Ap-2*ecc*R)/(1+ecc).
-
-	//SET sma TO R + (AP+PE)/2. // Circular orbit; sma = R + (AP+PA)/2
-
-	//PRINT " ".
-	//PRINT "ORBIT DELTA-V: " + round(dvAP,0) + " m/s".
-	//PRINT "DELTA-V REQUIRED: " + round(dvAP-SHIP:AIRSPEED,0) + " m/s".
-
 	LOCK THROTTLE TO THROTT. SET THROTT TO 1.
 	LOCAL tStart IS TIME:SECONDS.
 	WHEN TIME:SECONDS - tStart > 20 THEN {
-		//STAGE. // Pop the fairings
+		STAGE. // Pop the fairings
 	}
 
-	//PRINT " ".
-	//PRINT "CURRENT APOAPSIS: " + round(SHIP:APOAPSIS/1000,0) + " km".
-	//PRINT "TARGET APOAPSIS: " + round(AP/1000,0) + " km".
-	//PRINT "CALCULATED PERIAPSIS: " + round(PE/1000,0) + " km".
+	WHEN 1.15*SHIP:APOAPSIS >= AP THEN {
+		SET THROTT TO 0.25.
+	}
+
+	WHEN 1.05*SHIP:APOAPSIS >= AP THEN {
+		SET THROTT TO 0.1.
+	}
+
+	IF AP - SHIP:APOAPSIS < 10000 AND SHIP:AVAILABLETHRUST/(SHIP:MASS*g) > 1.45 {
+		SET THROTT TO 1/(SHIP:AVAILABLETHRUST/(SHIP:MASS*g)). // TWR = 1 thrust
+	} ELSE {
+		SET THROTT TO 1.
+	}
 
 	UNTIL SHIP:APOAPSIS >= AP {
 		SET STEER TO SHIP:PROGRADE + R(0,0,270).
-
-		IF AP - SHIP:APOAPSIS < 10000 AND SHIP:AVAILABLETHRUST/(SHIP:MASS*g) > 1.45 {
-			SET THROTT TO 1/(SHIP:AVAILABLETHRUST/(SHIP:MASS*g)). // TWR = 1 thrust
-		} ELSE {
-			SET THROTT TO 1.
-		}
 	}
 
 	SET THROTT TO 0.
@@ -120,19 +114,19 @@ function gnc {
 	PRINT " ".
 	CLEARSCREEN.
 	PRINT "Target orbit:".
-	PRINT "ECC: " + ECC.
-	PRINT "SMA: " + round(SMA/1000,2) + " km".
-	PRINT "AP: " + ROUND((Ra-radius)/1000,2) + " km".
-	PRINT "PE: " + ROUND((Rp1-radius)/1000,2) + " km".
-	PRINT "Orbital velocity: " + round(vOrbit1,2) + " m/s".
+	PRINT "> ECC: " + ECC.
+	PRINT "> SMA: " + round(SMA/1000,2) + " km".
+	PRINT "> AP: " + ROUND((Ra-radius)/1000,2) + " km".
+	PRINT "> PE: " + ROUND((Rp1-radius)/1000,2) + " km".
+	PRINT "> Orbital velocity: " + round(vOrbit1,2) + " m/s".
 
 	PRINT " ".
 	PRINT "Current orbit:".
-	PRINT "ECC: " + round(ORBIT:Eccentricity,2).
-	PRINT "SMA: " + round(ORBIT:SEMIMAJORAXIS/1000,2) + " km".
-	PRINT "AP: " + round(SHIP:APOAPSIS/1000,2) + " km".
-	PRINT "Orbital velocity: " + round(vOrbit0,2) + " m/s".
-	PRINT "Delta-v required: " + round(burndv,2) + " m/s".
+	PRINT "> ECC: " + round(ORBIT:Eccentricity,2).
+	PRINT "> SMA: " + round(ORBIT:SEMIMAJORAXIS/1000,2) + " km".
+	PRINT "> AP: " + round(SHIP:APOAPSIS/1000,2) + " km".
+	PRINT "> Orbital velocity: " + round(vOrbit0,2) + " m/s".
+	PRINT "> Delta-v required: " + round(burndv,2) + " m/s".
 
 	PRINT " ".
 	PRINT "CREATING NODE FOR INSERTION BURN".
@@ -147,13 +141,16 @@ function gnc {
 	SET t0 TO TIME:SECONDS.
 
 	WHEN TIME:SECONDS - t0 > 20 THEN {
-		SET kuniverse:timewarp:rate TO 50.
+		IF AP > 1000*1000 { // Over 1000 km
+			SET kuniverse:timewarp:rate TO 100.
+		} ELSE {
+			SET kuniverse:timewarp:rate TO 50.
+		}
 	}
 
 	WHEN PARKNODE:ETA < tburn+60 THEN {
 		SET kuniverse:timewarp:rate TO 10.
-	}
-
+	} 
 	WHEN PARKNODE:ETA < tburn+15 THEN {
 		SET kuniverse:timewarp:rate TO 1.
 	}
@@ -163,7 +160,7 @@ function gnc {
 	}
 
 	SET THROTT TO 1.
-	UNTIL PARKNODE:DELTAV:MAG <= 0 {
+	UNTIL PARKNODE:DELTAV:MAG <= 0.5 {
 		SET STEER TO PARKNODE:DELTAV.
 
 		IF PARKNODE:DELTAV:MAG < 20 AND PARKNODE:DELTAV:MAG > 2 {
@@ -174,11 +171,11 @@ function gnc {
 			SET THROTT TO 0.05.
 		}
 
-		//IF STAGE:LIQUIDFUEL < 0.2 {
-		//	SET THROTT TO 0.
-		//	PRINT "STAGE OUT OF FUEL - GUIDANCE ENDING".
-		//	STAGE.
-		//}
+		IF STAGE:LIQUIDFUEL < 0.2 {
+			SET THROTT TO 0.
+			PRINT "STAGE OUT OF FUEL - GUIDANCE ENDING".
+			STAGE.
+		}
 	}
 
 	SET THROTT TO 0.
@@ -238,7 +235,9 @@ PRINT "STARTING S2 GUIDANCE".
 PRINT " ".
 
 SET THROTTLE TO 0.15.
-WAIT 0.25.
+WAIT 1.
+SET THROTTLE TO 0.35.
+WAIT 0.5.
 
 // Eccentricity: circular = 0, elliptical = [0,1], parabolic = 1, hyperbolic > 1
 gnc(AP, ECC, INCL).

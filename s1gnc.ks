@@ -163,12 +163,12 @@ function vehicle_config {
 	}
 
 	IF S2GUIDANCE = 1 {
-		PRINT "Is the rocket built around the payload? (y/n): ". 
-		SET input TO read_input(47,LINENUM,"STR").
+		PRINT "Is the payload the root part? (y/n): ". 
+		SET input TO read_input(37,LINENUM,"STR").
 		IF input = "y" {
-			SET COMMDIR TO 10. // Payload is root part; talk to S1
+			SET COMMDIR TO "10". // Payload is root part; talk to S1
 		} ELSE {
-			SET COMMDIR TO 01. // Rocket is the root part; talk to S2
+			SET COMMDIR TO "01". // Rocket is the root part; talk to S2
 		} SET LINENUM TO LINENUM + 1.
 	}
 
@@ -184,10 +184,10 @@ function vehicle_config {
 	IF EXPEND = 0 {
 		PRINT "Enter recovery aggressiveness (1-3): ". 
 		SET input TO read_input(37,LINENUM,"INT").
-		IF input >= 1 AND input <= 3 {
+		IF input > 0 AND input <= 3 {
 			SET AGGR TO input.
 		} ELSE {
-			SET AGGR TO 1.
+			SET AGGR TO 2.
 		} SET LINENUM TO LINENUM + 1.
 
 		PRINT "Does the engine have modes? (y/n): ". 
@@ -209,8 +209,8 @@ function vehicle_config {
 		SET AGGR TO 3.
 	}
 
-	IF LAUNCH = 1 AND EXPEND = 0 {
-		SET h TO ALT:RADAR*0.75.
+	IF LAUNCH = 1 {
+		SET h TO ALT:RADAR*0.65.
 		PRINT "S1 height set to " + round(h,0) + " meters".
 	} ELSE IF LAUNCH = 0 AND EXPEND = 0 {
 		PRINT "Enter the approx height of S1 (meters): ". 
@@ -426,7 +426,6 @@ function recdv { // Function calculates delta-v required for stage recovery, and
 
 	// At this point, horizontal velocity = 0 and we've calculated how much we're flying back thanks to kerbin's rotation
 	// Get current ground distance from Kerbin, at this exact point in time. Calculate if kerbin's spin + 0 horizontal velocity is enough
-
 	IF recoverytarget = OCISLY AND ADDONS:TR:IMPACTPOS:LNG < OCISLY:LNG {
 		SET curr_Dist TO groundDist(ADDONS:TR:IMPACTPOS, recoverytarget).
 		SET flyback_dv TO (curr_dist/t_apgff).
@@ -486,10 +485,12 @@ function launch_vessel {
 	LOCK STEERING TO steer.
 
 	// Set aggressiveness
-	IF AGGR = 1 {
-		SET MARGIN TO 1.15.
-	} ELSE IF AGGR <= 2 AND AGGR > 1 {
+	IF AGGR < 1 {
+		SET MARGIN TO 1.1.
+	} ELSE IF AGGR > 1 AND AGGR < 2 {
 		SET MARGIN TO 1.05.
+	} ELSE IF AGGR <= 2 AND AGGR > 1 {
+		SET MARGIN TO 1.0.
 	} ELSE {
 		SET MARGIN TO 0.95.
 	}
@@ -572,7 +573,7 @@ function launch_vessel {
 	}
 
 	RCS OFF.
-	UNTIL SHIP:APOAPSIS > AP OR MECO = 1 {
+	UNTIL SHIP:APOAPSIS >= AP OR MECO = 1 {
 		SET steer TO SHIP:SRFPROGRADE. // Start gravity turn
 
 		SET t0 TO TIME:SECONDS.
@@ -592,12 +593,24 @@ function launch_vessel {
 						SET targeted TO OCISLY. SET MODE TO "ASDS".
 					} ELSE {
 						SET MECO TO 1.
+						IF S2GUIDANCE = 1 {
+							S2connection:SENDMESSAGE("MECO").
+							S2connection:SENDMESSAGE(AP).
+							S2connection:SENDMESSAGE(ECC).
+							S2connection:SENDMESSAGE(INCL).
+						}
 					}
 				}
 			} ELSE {
 				IF STAGE:LIQUIDFUEL < 50 {
 					SET thrott TO 0.001.
 					SET MECO TO 1.
+					IF S2GUIDANCE = 1 {
+						S2connection:SENDMESSAGE("MECO").
+						S2connection:SENDMESSAGE(AP).
+						S2connection:SENDMESSAGE(ECC).
+						S2connection:SENDMESSAGE(INCL).
+					}
 				}
 			}
 		}
@@ -699,7 +712,7 @@ function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) a
 
 	SET bbt0 TO TIME:SECONDS.
 	UNTIL dist < 50 OR distDelta > 0 {
-		IF TIME:SECONDS - bbt0 > 0.22 { // Update dist0 every 0.15/0.2/0.22 seconds, lower values seem to not work.
+		IF TIME:SECONDS - bbt0 > 0.22 { // Update dist0 every 0.15/0.2/0.22 seconds, lower values seem to hit tickrate(?).
 			SET bbt0 TO TIME:SECONDS.
 			SET dist0 TO dist + 10. 
 		}
@@ -787,7 +800,7 @@ function S2connect {
 
 function MECOconnect {
 	CLEARSCREEN.
-	IF COMMDIR = 01 { // Here S1 stays as the main vessel; let's ping S2
+	IF COMMDIR = "01" { // Here S1 stays as the main vessel; let's ping S2
 		PRINT "COMM-MODE: " + COMMDIR.
 		PRINT "RE-ESTABLISHING CONNECTION WITH S2...".
 		SET S2name TO VESSEL(SHIP:NAME + " Relay").
@@ -807,7 +820,7 @@ function MECOconnect {
 		}
 	} 
 
-	ELSE IF COMMDIR = 10 { // Here S1 becomes the "probe"; connect back to main vessel (S2)
+	ELSE IF COMMDIR = "10" { // Here S1 becomes the "probe"; connect back to main vessel (S2)
 		PRINT "COMM-MODE: " + COMMDIR.
 		PRINT "RE-ESTABLISHING CONNECTION WITH S2...".
 		SET S2name TO VESSEL(VESSELNAME).
@@ -900,8 +913,7 @@ function output {
 		}
 		SET t1output TO TIME:SECONDS.
 	} ELSE {
-		// Updates values instead of whole display to avoid stutter
-		// AT (COLUMN, ROW)
+		// Updates values instead of whole display to avoid stutter. Syntax: AT (COLUMN, ROW)
 		PRINT round(TIME:SECONDS-t0ref,0) + " s" AT (6,4).
 		PRINT missionstatus AT (9,5).
 		PRINT MODE AT (11,6).
@@ -1025,8 +1037,8 @@ WHEN ALT:RADAR < 65000 THEN {
 	SET STEERINGMANAGER:PITCHPID:KP TO 1.95. // 1.9
 }
 
-WHEN ALT:RADAR < h+45 THEN { // 70 --> 50 --> 70 --> 100 --> 120
-	SET throttPID:SETPOINT TO -0.6. // --> -0.9 --> -1.0 --> -0.85
+WHEN ALT:RADAR < h+45 THEN { // 70 --> 50 --> 45
+	SET throttPID:SETPOINT TO -0.6. // --> -0.9 --> -1.0 --> -0.85 --> -0.6
 	SET thrott TO thrott + 0.1.
 } 
 
@@ -1063,7 +1075,7 @@ UNTIL BURN = 1 OR EXPEND = 1 {
 		}
 	} 
 
-	// Control
+	// Control functions
 	control().
 
 	// Entry burn - performed if Q goes above threshold.
@@ -1084,8 +1096,9 @@ UNTIL BURN = 1 OR EXPEND = 1 {
 			OUTPUT().
 		}
 
-		LOG t_impact TO impactlog.txt.
-		LOG t_decel TO decellog.txt.
+		// Uncomment these if you want to log some impact variables
+		//LOG t_impact TO impactlog.txt.
+		//LOG t_decel TO decellog.txt.
 	}
 }
 
