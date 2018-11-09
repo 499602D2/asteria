@@ -28,7 +28,7 @@ vehicle_config().
 SET DEBUG TO 1.
 
 // Define constants.
-SET g TO 9.80665.
+LOCK g TO SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2.
 
 // Start MET, fuel consumption, initialise some values
 SET t0ref TO TIME:SECONDS.
@@ -127,7 +127,6 @@ function remove_previous {
 }
 
 function vehicle_config {
-	// ORBIT PARAMETERS
 	SET LINENUM TO 0.
 	IF ALT:RADAR < 1000 {
 		PRINT "Perform a full launch? (y/n): ". 
@@ -157,9 +156,9 @@ function vehicle_config {
 	}
 
 	IF LAUNCH = 1 {
-		PRINT "Enter apoapsis (meters): ". SET AP TO read_input(16,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 3
-		PRINT "Enter eccentricity [0,1[: ". SET ECC TO read_input(20,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 4
-		PRINT "Enter inclination (degrees): ". SET INCL TO read_input(19,LINENUM,"INT"). SET LINENUM TO LINENUM + 1.  // line 5
+		PRINT "Enter apoapsis (km): ". SET AP TO 1000*read_input(21,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 3
+		PRINT "Enter eccentricity [0,1[: ". SET ECC TO read_input(26,LINENUM,"INT"). SET LINENUM TO LINENUM + 1. // line 4
+		PRINT "Enter inclination (degrees): ". SET INCL TO read_input(29,LINENUM,"INT"). SET LINENUM TO LINENUM + 1.  // line 5
 	}
 
 	PRINT "Recover S1? (y/n): ". 
@@ -172,6 +171,14 @@ function vehicle_config {
 
 	// Vehicle
 	IF EXPEND = 0 {
+		PRINT "Enter recovery aggressiveness (1-3): ". 
+		SET input TO read_input(37,LINENUM,"INT").
+		IF input >= 1 AND input <= 3 {
+			SET AGGR TO input.
+		} ELSE {
+			SET AGGR TO 1.
+		} SET LINENUM TO LINENUM + 1.
+
 		PRINT "Does the engine have modes? (y/n): ". 
 		SET input TO read_input(35,LINENUM,"STR").
 		IF input = "y" { 
@@ -243,7 +250,6 @@ function getaoa { // Angle of attack
 }
 
 function trueMaxAcceleration {
-	//SET aoa TO getaoa().
 	SET initialmass TO SHIP:MASS.
 
 	SET Isp TO engine:ISP.
@@ -257,25 +263,24 @@ function trueMaxAcceleration {
 	} 
 
 	// All this, just so we can get a more accurate average max acceleration.
-	SET mfrate TO (SHIP:AVAILABLETHRUST/(Isp)*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)). // Mass flow-rate
-	//SET dv1 TO SQRT(2*g*(ALT:RADAR-h)+SHIP:VERTICALSPEED^2). 
+	SET mfrate TO (SHIP:AVAILABLETHRUST/(Isp)*g). // Mass flow-rate
 	SET t_impact TO ABS(targeted:DISTANCE/SHIP:AIRSPEED). 
-	SET dv TO SHIP:AIRSPEED. // SET dv TO SHIP:GROUNDSPEED + ABS(SHIP:VERTICALSPEED) + g/t_impact.
-	SET finalMass TO (initialmass*constant:e^(-dv/(ISP*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)))). 
+	SET dv TO SHIP:AIRSPEED.
+	SET finalMass TO (initialmass*constant:e^(-dv/(ISP*g))). 
 	SET burntime TO ((initialmass-finalMass)/mfrate). // Time required for above dv burn
-	SET gdv TO ((SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)*burntime). // How much gravity fucks us over
-	SET trueMass TO (initialmass*constant:e^(-(dv+gdv)/(ISP*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)))). 
+	SET gdv TO (g*burntime). // How much gravity fucks us over
+	SET trueMass TO (initialmass*constant:e^(-(dv+gdv)/(ISP*g))). 
 	
 	// Average maximum acceleration calculation.
-	//SET a1 TO ((SHIP:AVAILABLETHRUST/SHIP:MASS)-g).
-	//SET a2 TO ((SHIP:AVAILABLETHRUST/trueMass)-g).
-	//SET amax TO (((a1+a2)/1.8))*SIN(aoa). // <------/ moved here
+	IF AGGR <= 2 {
+		SET a1 TO (SHIP:AVAILABLETHRUST/SHIP:MASS).
+		SET a2 TO (SHIP:AVAILABLETHRUST/trueMass).
+		SET amax TO ((a1+a2)/1.8)*SIN(getaoa()) - g.
+	} ELSE {
+		SET a2 TO ((SHIP:AVAILABLETHRUST/trueMass)-g).
+		SET amax TO a2.
+		}
 
-	// Land purely based on maximum acceleration
-	SET a2 TO ((SHIP:AVAILABLETHRUST/trueMass)-g).
-	SET amax TO a2. //*SIN(aoa).
-
-	// Return maximum acceleration
 	RETURN amax.
 }
 
@@ -418,7 +423,7 @@ function recdv { // Function calculates delta-v required for stage recovery, and
 	}
 	
 	// Assume constant acceleration
-	SET v_ff TO (SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2)*t_apgFF.
+	SET v_ff TO g*t_apgFF.
 	SET rec_dv TO flyback_dv + v_ff.
 	RETURN rec_dv.
 }
@@ -441,10 +446,10 @@ function reclf { // Function calculates liquid fuel expended on stage recovery, 
 			SET initialmass TO initialmass + PART:MASS.
 		} }
 
-	SET mfrate TO SHIP:AVAILABLETHRUST/engine:ISP*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2).
+	SET mfrate TO SHIP:AVAILABLETHRUST/engine:ISP*g.
 	SET dv TO recdv(recoverytarget).
 
-	SET finalMass TO initialmass*constant:e^(-dv/(engine:ISP*(SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2))).
+	SET finalMass TO initialmass*constant:e^(-dv/(engine:ISP*g)).
 	SET BURNtime TO (initialmass-finalMass)/mfrate.
 	SET dmass TO initialmass - finalMass.
 
@@ -467,6 +472,15 @@ function launch_vessel {
 	// Lock steering
 	SET steer TO SHIP:UP + R(0,0,270).
 	LOCK STEERING TO steer.
+
+	// Set aggressiveness
+	IF AGGR = 1 {
+		SET MARGIN TO 1.15.
+	} ELSE IF AGGR <= 2 AND AGGR > 1 {
+		SET MARGIN TO 1.05.
+	} ELSE {
+		SET MARGIN TO 0.95.
+	}
 
 	// LAUNCH
 	CLEARSCREEN.
@@ -559,7 +573,7 @@ function launch_vessel {
 			SET recov_lf TO reclf(LZ1).
 			SET asdsrecov_lf TO reclf(OCISLY).
 			IF EXPEND = 0 {
-				IF (recov_lf*(5/9))*0.9 > STAGE:LIQUIDFUEL { // 1.25
+				IF (recov_lf*(5/9))*MARGIN > STAGE:LIQUIDFUEL { // 1.25
 					//SET MECO TO 1. // IF RTLS ONLY
 					IF asdsrecov_lf < recov_lf AND MODESWITCH = 1 {
 						SET MECO TO 0.
