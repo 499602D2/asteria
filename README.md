@@ -26,6 +26,9 @@ An example Falcon 9 craft file is provided - this craft requires the following m
 - Open the kOS terminals for both S1 and S2. Type `switch to 0. run s1gnc.` in the S1 terminal, and `switch to 0. run s2gnc.` in the S2 terminal.
 - Enter the run parameters into the terminal as the program asks for them, by simply typing the response and hitting enter afterwards. To cancel the execution, press ctrl+c.
 
+### FAQ
+- _What does "is the payload the root part" mean?_ When you started building your vessel, did you first create the payload and then build the rocket around it (answer yes), or did you build a payload into a pre-built rocket (answer no).
+
 ### Common errors and fixes
 - _S1 crashes into S2:_ add a kOS terminal to S2 and run the s2gnc.ks program on it. Also set S2 guidance to enabled.
 - _Stage doesn't seem to control itself for landing:_ add (larger) grid fins or regular, steerable fins.
