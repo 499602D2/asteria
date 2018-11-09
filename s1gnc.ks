@@ -264,7 +264,6 @@ function getaoa { // Angle of attack
 
 function trueMaxAcceleration {
 	SET initialmass TO SHIP:MASS.
-
 	SET Isp TO engine:ISP.
 	IF Isp = 0 {
 		SET n TO 0.
@@ -789,6 +788,7 @@ function S2connect {
 function MECOconnect {
 	CLEARSCREEN.
 	IF COMMDIR = 01 { // Here S1 stays as the main vessel; let's ping S2
+		PRINT "COMM-MODE: " + COMMDIR.
 		PRINT "RE-ESTABLISHING CONNECTION WITH S2...".
 		SET S2name TO VESSEL(SHIP:NAME + " Relay").
 		SET S2connection TO S2name:CONNECTION.
@@ -798,12 +798,17 @@ function MECOconnect {
 		IF S2connection:ISCONNECTED {
 			PRINT "CONNECTION ESHABLISHED!".
 			PRINT "CONNECTION DELAY: " + S2connection:DELAY + " s".
+			S2connection:SENDMESSAGE("MECO").
+			S2connection:SENDMESSAGE(AP).
+			S2connection:SENDMESSAGE(ECC).
+			S2connection:SENDMESSAGE(INCL).
 		} ELSE {
 			PRINT "CONNECTION FAILURE!".
 		}
 	} 
 
 	ELSE IF COMMDIR = 10 { // Here S1 becomes the "probe"; connect back to main vessel (S2)
+		PRINT "COMM-MODE: " + COMMDIR.
 		PRINT "RE-ESTABLISHING CONNECTION WITH S2...".
 		SET S2name TO VESSEL(VESSELNAME).
 		SET S2connection TO S2name:CONNECTION.
@@ -813,20 +818,14 @@ function MECOconnect {
 		IF S2connection:ISCONNECTED {
 			PRINT "CONNECTION ESHABLISHED!".
 			PRINT "CONNECTION DELAY: " + S2connection:DELAY + " s".
+			S2connection:SENDMESSAGE("MECO").
+			S2connection:SENDMESSAGE(AP).
+			S2connection:SENDMESSAGE(ECC).
+			S2connection:SENDMESSAGE(INCL).
 		} ELSE {
 			PRINT "CONNECTION FAILURE!".
 		}
 	}
-
-	// Telling S2 we've had MECO, giving orbital parameters
-	IF S2connection:ISCONNECTED {
-		PRINT " ".
-		S2connection:SENDMESSAGE("MECO").
-		S2connection:SENDMESSAGE(AP).
-		S2connection:SENDMESSAGE(ECC).
-		S2connection:SENDMESSAGE(INCL).
-	}
-
 	OUTPUT().
 }
 
@@ -949,7 +948,7 @@ IF MODE = "ASDS" {
 	targetOvershoot().
 }
 
-IF BOOSTBACK = 1 {
+IF BOOSTBACK = 1 AND EXPEND = 0 {
 	OUTPUT().
 	run_boostback().
 }
@@ -975,7 +974,7 @@ SET STEERINGMANAGER:PITCHPID:KP TO 1.9.
 SET t0 TO TIME:SECONDS.
 SET t1 TO TIME:SECONDS + 2.
 SET missionstatus TO "STAGE 1 COAST".
-IF MODE = "RTLS" {
+IF MODE = "RTLS" AND EXPEND = 0 {
 	UNTIL ALT:RADAR < 65000 AND SHIP:VERTICALSPEED < 0 { // 26500
 		SET t0 TO TIME:SECONDS.
 		SET steer TO ADDONS:TR:CORRECTEDVEC.
@@ -986,7 +985,7 @@ IF MODE = "RTLS" {
 			SET t1 TO TIME:SECONDS.
 		}
 	}
-} ELSE {
+} ELSE IF MODE = "ASDS" AND EXPEND = 0 {
 	UNTIL ALT:RADAR < 65000 {
 		SET t0 TO TIME:SECONDS.
 		SET steer TO SHIP:SRFRETROGRADE.
@@ -1031,7 +1030,7 @@ WHEN ALT:RADAR < h+45 THEN { // 70 --> 50 --> 70 --> 100 --> 120
 	SET thrott TO thrott + 0.1.
 } 
 
-IF MODE = "ASDS" {
+IF MODE = "ASDS" AND EXPEND = 0 {
 	WHEN ALT:RADAR < 3500 THEN {
 		SET targeted TO target0.
 	}

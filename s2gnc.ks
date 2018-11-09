@@ -11,13 +11,11 @@ SET mu TO 3.5316*10^12. // Standard gravitational parameter
 // Functions
 function msgq {
 	SET QUEUE TO CORE:MESSAGES.
-
 	IF QUEUE:LENGTH = 0 { // Go through core's and ship's messages at the same time
 		SET QUEUE TO SHIP:MESSAGES.
 	}
 
 	PRINT "MESSAGES IN QUEUE: " + QUEUE:LENGTH.
-
 	UNTIL QUEUE:EMPTY {
 		SET RECEIVED TO QUEUE:POP.
 		PRINT "MESSAGE RECEIVED: " + RECEIVED:CONTENT.
@@ -168,8 +166,6 @@ function gnc {
 	UNTIL PARKNODE:DELTAV:MAG <= 0 {
 		SET STEER TO PARKNODE:DELTAV.
 
-		//PRINT PARKNODE:DELTAV:MAG.
-
 		IF PARKNODE:DELTAV:MAG < 20 AND PARKNODE:DELTAV:MAG > 2 {
 			SET THROTT TO 0.1.
 		}
@@ -198,9 +194,8 @@ function gnc {
 // If launch is true, we monitor the messages received for an indication of MECO
 CLEARSCREEN.
 SET LAUNCH to TRUE.
-
 // Debug
-//SET LAUNCH TO FALSE. SET AP TO 500000. SET ECC TO 0. SET INCL TO 90.
+//SET LAUNCH TO FALSE. SET AP TO 2868.75*1000. SET ECC TO 0. SET INCL TO 90.
 
 // Monitor message queue
 SET t0 TO TIME:SECONDS.
