@@ -7,7 +7,7 @@ Asteria is a kOS script capable of launching a two-staged craft to any specified
 ### Before running
 Your craft must have the following specifications:
 - Grid fins and landing legs on S1 (don't use airbrakes - if you don't have grid fins, use regular fins)
-- A kOS terminal on both S1 and S2
+- A kOS terminal on both S1 and S2; right click the terminals, "change name tag", and name them accordingly ("S1" and "S2")
 - This staging order: S1 engines -> launch clamps -> S2 sep + S2 engine(s)
 
 An example Falcon 9 craft file is provided - this craft requires the following mods:
