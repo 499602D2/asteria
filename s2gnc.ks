@@ -44,15 +44,6 @@ function msgq {
 	} 
 }
 
-function dispinit {
-	PRINT "|ASTERIA S2 GNC - v0.01". // 0,0
-	PRINT "|".
-	PRINT "|ORBIT".
-	PRINT "|".
-	PRINT "|VEHICLE".
-
-}
-
 function dispupdate {
 
 }
@@ -64,30 +55,23 @@ function gnc {
 
 	LOCAL t0 IS TIME:SECONDS.
 
-	RCS ON.
-	SAS OFF.
-
 	LOCK STEERING TO STEER. 
 
 	IF SHIP:VERTICALSPEED > 0 {
-		SET STEER TO SHIP:PROGRADE + R(0,0,270).
+		SET STEER TO SHIP:PROGRADE.
 	} ELSE {
 		SET STEER TO HEADING(INCL+90, 45).
 	}
 	
 	WAIT 0.5.
 
-	// Calculate orbital dv
-	SET R TO AP + 600000. // Radius of kerbin + apoapsis + altitude
-	SET Mkerbin TO 5.2915158*10^22. // kg
-	SET const_G TO 6.674 * 10^(-11).
-	SET a_Ap TO mu/R^2. // Gravitational acceleration at apoapsis
+	RCS ON.
+	SAS OFF.
 
 	// Periapsis from eccentricity and apoapsis
-	SET PE TO (-ecc*Ap+Ap-2*ecc*R)/(1+ecc).
+	//SET PE TO (-ecc*Ap+Ap-2*ecc*R)/(1+ecc).
 
-	SET sma TO R + (AP+PE)/2. // Circular orbit; sma = R + (AP+PA)/2
-	SET dvAP TO SQRT(const_G * Mkerbin *(2/R - 1/sma)). // Calculate dv from vis-viva equation
+	//SET sma TO R + (AP+PE)/2. // Circular orbit; sma = R + (AP+PA)/2
 
 	//PRINT " ".
 	//PRINT "ORBIT DELTA-V: " + round(dvAP,0) + " m/s".
@@ -95,8 +79,8 @@ function gnc {
 
 	LOCK THROTTLE TO THROTT. SET THROTT TO 1.
 	LOCAL tStart IS TIME:SECONDS.
-	WHEN TIME:SECONDS - tStart > 10 THEN {
-		//STAGE.
+	WHEN TIME:SECONDS - tStart > 20 THEN {
+		//STAGE. // Pop the fairings
 	}
 
 	//PRINT " ".
@@ -110,7 +94,7 @@ function gnc {
 		IF AP - SHIP:APOAPSIS < 10000 AND SHIP:AVAILABLETHRUST/(SHIP:MASS*g) > 1.45 {
 			SET THROTT TO 1/(SHIP:AVAILABLETHRUST/(SHIP:MASS*g)). // TWR = 1 thrust
 		} ELSE {
-			SET THROTT TO 0.75.
+			SET THROTT TO 1.
 		}
 	}
 
@@ -120,71 +104,85 @@ function gnc {
 	SET t0 TO TIME:SECONDS.
 	SET tAP TO ETA:APOAPSIS. // Seconds until we reach apoapsis
 
-	SET R TO 600000 + SHIP:APOAPSIS.
-	SET targetAP TO AP.
-	SET targetPE TO (-ECC*AP+AP-2*ECC*R)/(1+ECC).
-	SET smatarget TO R + (targetAP+targetPE)/2. // Circular orbit; sma = R + (AP+PA)/2
+	// Calculate orbital dv
+	SET radius TO Kerbin:radius.
+	SET Mkerbin TO Kerbin:Mass. 
+	SET const_G TO constant:G.
 
-	SET vOrbit TO SQRT(mu*(2/R - 1/ORBIT:SEMIMAJORAXIS)).
-	SET vTarget TO SQRT(mu*(2/R - 1/(smatarget))).
-	SET targetdeltav TO vTarget - vOrbit.
+	SET Ra TO radius + AP.
+	SET SMA TO Ra/(1+ECC).
 
-	SET PElift TO PE - SHIP:ORBIT:PERIAPSIS.
-	//SET burndv2 TO SQRT(2*a_Ap*PElift).
-	SET burndv TO dvAP - vOrbit.
+	SET Rp1 TO 2*SMA - Ra. // Final periapsis
+	SET Rp0 TO SHIP:PERIAPSIS + radius. // Initial periapsis
+
+	SET vOrbit0 TO SQRT(mu*(2/Ra - 2/(Ra+Rp0))). // orbital velocity of initial trajectory
+	SET vOrbit1 TO SQRT(mu*(2/Ra - 2/(Ra+Rp1))). // orbital velocity of final orbit
+	SET burndv TO vOrbit1 - vOrbit0. 
 
 	PRINT " ".
-	//PRINT "SHIP:ORBIT:PERIAPSIS: " + round(SHIP:ORBIT:PERIAPSIS/1000,2) + " km".
-	//PRINT "PElift: " + round(PElift/1000,2) + " km".
-	//PRINT "CALCULATED DV TO PE (1): " + round(burndv,0) + " m/s".
-	//PRINT "CALCULATED DV TO PE: " + round(burndv,0) + " m/s".
-	//PRINT "ORBITAL SPEED (AP): " + round(vorbit,0) + " m/s".
-	//PRINT "---".
-	//PRINT "NEW ORBITAL CALCS:".
 	CLEARSCREEN.
-	PRINT "Debug prints:".
-	PRINT "Target SMA: " + round(smatarget,2).
-	PRINT "----------".
-	PRINT "Orbital parameters:".
-	PRINT "INCL: " + INCL.
+	PRINT "Target orbit:".
 	PRINT "ECC: " + ECC.
-	PRINT "AP: " + ROUND(AP/1000,2) + " km".
-	PRINT "PE: " + ROUND((targetPE+600000)/1000,2) + " km".
+	PRINT "SMA: " + round(SMA/1000,2) + " km".
+	PRINT "AP: " + ROUND((Ra-radius)/1000,2) + " km".
+	PRINT "PE: " + ROUND((Rp1-radius)/1000,2) + " km".
+	PRINT "Orbital velocity: " + round(vOrbit1,2) + " m/s".
+
 	PRINT " ".
-	PRINT "Current orbital velocity: " + round(vOrbit,2) + " m/s".
-	PRINT "Target orbit velocity: " + round(vTarget,2) + " m/s".
-	PRINT "Delta-v required: " + round(targetdeltav,2) + " m/s".
+	PRINT "Current orbit:".
+	PRINT "ECC: " + round(ORBIT:Eccentricity,2).
+	PRINT "SMA: " + round(ORBIT:SEMIMAJORAXIS/1000,2) + " km".
+	PRINT "AP: " + round(SHIP:APOAPSIS/1000,2) + " km".
+	PRINT "Orbital velocity: " + round(vOrbit0,2) + " m/s".
+	PRINT "Delta-v required: " + round(burndv,2) + " m/s".
 
 	PRINT " ".
 	PRINT "CREATING NODE FOR INSERTION BURN".
 	PRINT "COASTING UNTIL BURN START".
 
-	SET PARKNODE TO NODE(TIME:SECONDS+tAP, 0, 0, targetdeltav).
+	SET PARKNODE TO NODE(TIME:SECONDS+tAP, 0, 0, burndv).
 	ADD PARKNODE.
 
 	SET STEER TO PARKNODE:DELTAV.
-
 	SET a TO SHIP:AVAILABLETHRUST/SHIP:MASS.
 	SET tburn TO burndv/a.
+	SET t0 TO TIME:SECONDS.
+
+	WHEN TIME:SECONDS - t0 > 20 THEN {
+		SET kuniverse:timewarp:rate TO 50.
+	}
+
+	WHEN PARKNODE:ETA < tburn+60 THEN {
+		SET kuniverse:timewarp:rate TO 10.
+	}
+
+	WHEN PARKNODE:ETA < tburn+15 THEN {
+		SET kuniverse:timewarp:rate TO 1.
+	}
 
 	UNTIL PARKNODE:ETA < tburn {
 		SET STEER TO PARKNODE:DELTAV.
 	}
 
-	UNTIL PARKNODE:DELTAV:MAG <= 0.5 {
+	SET THROTT TO 1.
+	UNTIL PARKNODE:DELTAV:MAG <= 0 {
 		SET STEER TO PARKNODE:DELTAV.
-		SET THROTT TO 1.
 
-		PRINT PARKNODE:DELTAV:MAG.
+		//PRINT PARKNODE:DELTAV:MAG.
 
-		IF PARKNODE:DELTAV:MAG < 100 {
+		IF PARKNODE:DELTAV:MAG < 20 AND PARKNODE:DELTAV:MAG > 2 {
 			SET THROTT TO 0.1.
 		}
 
-		IF STAGE:LIQUIDFUEL < 0.2 {
-			PRINT "STAGE OUT OF FUEL - GUIDANCE ENDING".
-			STAGE.
+		IF PARKNODE:DELTAV:MAG < 2 {
+			SET THROTT TO 0.05.
 		}
+
+		//IF STAGE:LIQUIDFUEL < 0.2 {
+		//	SET THROTT TO 0.
+		//	PRINT "STAGE OUT OF FUEL - GUIDANCE ENDING".
+		//	STAGE.
+		//}
 	}
 
 	SET THROTT TO 0.
@@ -200,7 +198,9 @@ function gnc {
 // If launch is true, we monitor the messages received for an indication of MECO
 CLEARSCREEN.
 SET LAUNCH to TRUE.
-//SET LAUNCH TO FALSE. SET AP TO 300000. SET ECC TO 0.32. SET INCL TO 0.
+
+// Debug
+//SET LAUNCH TO FALSE. SET AP TO 500000. SET ECC TO 0. SET INCL TO 90.
 
 // Monitor message queue
 SET t0 TO TIME:SECONDS.
@@ -250,6 +250,11 @@ gnc(AP, ECC, INCL).
 
 PRINT " ".
 PRINT "S2 ORBIT INJECTION COMPLETE".
+PRINT "ORBIT STATUS:".
+PRINT "SMA: " + round(ORBIT:SEMIMAJORAXIS,2).
+PRINT "ECC: " + round(ORBIT:Eccentricity,2).
+PRINT "AP: " + round(ORBIT:APOAPSIS,2).
+PRINT "PE: " + round(ORBIT:PERIAPSIS,2).
 PRINT "".
 PRINT "EXITING PROGRAM.".
 PRINT "THANK YOU FOR FLYING WITH ASTERIA".

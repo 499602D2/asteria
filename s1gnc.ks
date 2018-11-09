@@ -31,6 +31,7 @@ SET DEBUG TO 1.
 LOCK g TO SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2.
 
 // Start MET, fuel consumption, initialise some values
+SET VESSELNAME TO SHIP:NAME.
 SET t0ref TO TIME:SECONDS.
 SET start_time TO TIME:SECONDS.
 SET lf0 TO SHIP:LIQUIDFUEL.
@@ -161,6 +162,16 @@ function vehicle_config {
 		PRINT "Enter inclination (degrees): ". SET INCL TO read_input(29,LINENUM,"INT"). SET LINENUM TO LINENUM + 1.  // line 5
 	}
 
+	IF S2GUIDANCE = 1 {
+		PRINT "Is the rocket built around the payload? (y/n): ". 
+		SET input TO read_input(47,LINENUM,"STR").
+		IF input = "y" {
+			SET COMMDIR TO 10. // Payload is root part; talk to S1
+		} ELSE {
+			SET COMMDIR TO 01. // Rocket is the root part; talk to S2
+		} SET LINENUM TO LINENUM + 1.
+	}
+
 	PRINT "Recover S1? (y/n): ". 
 	SET input TO read_input(19,LINENUM,"STR").
 	IF input = "y" {
@@ -194,12 +205,14 @@ function vehicle_config {
 		} ELSE {
 			SET MODESWITCH TO 0.
 		} SET LINENUM TO LINENUM + 1.
+	} ELSE {
+		SET AGGR TO 3.
 	}
 
-	IF LAUNCH = 1 {
+	IF LAUNCH = 1 AND EXPEND = 0 {
 		SET h TO ALT:RADAR*0.75.
 		PRINT "S1 height set to " + round(h,0) + " meters".
-	} ELSE {
+	} ELSE IF LAUNCH = 0 AND EXPEND = 0 {
 		PRINT "Enter the approx height of S1 (meters): ". 
 		SET h TO read_input(40,LINENUM,"INT").
 	}
@@ -549,7 +562,6 @@ function launch_vessel {
 		}
 	}
 
-	RCS OFF.
 	UNTIL SHIP:VERTICALSPEED > 200 {
 		SET STEER TO HEADING(INCL,83). // 84 (354 good for RTLS, 352 for ASDS)
 
@@ -560,6 +572,7 @@ function launch_vessel {
 		}
 	}
 
+	RCS OFF.
 	UNTIL SHIP:APOAPSIS > AP OR MECO = 1 {
 		SET steer TO SHIP:SRFPROGRADE. // Start gravity turn
 
@@ -584,7 +597,7 @@ function launch_vessel {
 				}
 			} ELSE {
 				IF STAGE:LIQUIDFUEL < 50 {
-					SET thrott TO 0.
+					SET thrott TO 0.001.
 					SET MECO TO 1.
 				}
 			}
@@ -775,26 +788,44 @@ function S2connect {
 
 function MECOconnect {
 	CLEARSCREEN.
-	PRINT "RE-ESTABLISHING CONNECTION WITH S2...".
-	SET S2name TO VESSEL(SHIP:NAME + " Relay").
-	SET S2connection TO S2name:CONNECTION.
+	IF COMMDIR = 01 { // Here S1 stays as the main vessel; let's ping S2
+		PRINT "RE-ESTABLISHING CONNECTION WITH S2...".
+		SET S2name TO VESSEL(SHIP:NAME + " Relay").
+		SET S2connection TO S2name:CONNECTION.
 
-	PRINT " ".
-	PRINT "TESTING CONNECTION...".
-	IF S2connection:ISCONNECTED {
-		PRINT "CONNECTION ESHABLISHED!".
-		PRINT "CONNECTION DELAY: " + S2connection:DELAY + " s".
-	} ELSE {
-		PRINT "CONNECTION FAILURE!".
+		PRINT " ".
+		PRINT "TESTING CONNECTION...".
+		IF S2connection:ISCONNECTED {
+			PRINT "CONNECTION ESHABLISHED!".
+			PRINT "CONNECTION DELAY: " + S2connection:DELAY + " s".
+		} ELSE {
+			PRINT "CONNECTION FAILURE!".
+		}
+	} 
+
+	ELSE IF COMMDIR = 10 { // Here S1 becomes the "probe"; connect back to main vessel (S2)
+		PRINT "RE-ESTABLISHING CONNECTION WITH S2...".
+		SET S2name TO VESSEL(VESSELNAME).
+		SET S2connection TO S2name:CONNECTION.
+
+		PRINT " ".
+		PRINT "TESTING CONNECTION...".
+		IF S2connection:ISCONNECTED {
+			PRINT "CONNECTION ESHABLISHED!".
+			PRINT "CONNECTION DELAY: " + S2connection:DELAY + " s".
+		} ELSE {
+			PRINT "CONNECTION FAILURE!".
+		}
 	}
 
-	PRINT " ".
-
 	// Telling S2 we've had MECO, giving orbital parameters
-	S2connection:SENDMESSAGE("MECO").
-	S2connection:SENDMESSAGE(AP).
-	S2connection:SENDMESSAGE(ECC).
-	S2connection:SENDMESSAGE(INCL).
+	IF S2connection:ISCONNECTED {
+		PRINT " ".
+		S2connection:SENDMESSAGE("MECO").
+		S2connection:SENDMESSAGE(AP).
+		S2connection:SENDMESSAGE(ECC).
+		S2connection:SENDMESSAGE(INCL).
+	}
 
 	OUTPUT().
 }
@@ -924,9 +955,11 @@ IF BOOSTBACK = 1 {
 }
 
 RCS ON.
-SET initialmass TO SHIP:MASS.
-SET steer TO ADDONS:TR:CORRECTEDVEC. LOCK STEERING TO steer.
-SET thrott TO 0. LOCK THROTTLE TO thrott.
+IF EXPEND = 0 {
+	SET initialmass TO SHIP:MASS.
+	SET steer TO ADDONS:TR:CORRECTEDVEC. LOCK STEERING TO steer.
+	SET thrott TO 0. LOCK THROTTLE TO thrott.
+}
 
 // Get engines again
 CLEARSCREEN.
