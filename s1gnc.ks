@@ -20,8 +20,8 @@ CLEARSCREEN.
 PRINT "WELCOME TO ASTERIA!".
 PRINT "STARTING VEHICLE CONFIGURATION".
 WAIT 2.
-CLEARSCREEN.
 
+CLEARSCREEN.
 vehicle_config().
 
 // Debug? (Suppresses OUTPUT())
@@ -31,6 +31,7 @@ SET DEBUG TO 1.
 LOCK g TO SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2.
 
 // Start MET, fuel consumption, initialise some values
+SET missionstatus TO "AWAITING LIFTOFF".
 SET VESSELNAME TO SHIP:NAME.
 SET t0ref TO TIME:SECONDS.
 SET start_time TO TIME:SECONDS.
@@ -54,9 +55,6 @@ SET recov_dv TO 0.
 SET recov_lf TO 0.
 SET MECO TO 0.
 
-// Mission status
-SET missionstatus TO "AWAITING LIFTOFF".
-
 // PID-loop and control function inits
 SET thrott_loop_initialised TO FALSE.
 SET flightThrottleInitialised TO FALSE.
@@ -78,20 +76,29 @@ SET TRIANGLE TO LATLNG(-0.102062495776151,-74.6512243417649). //SET targeted TO 
 SET FLAGPOLE TO LATLNG(-0.0941386551432377,-74.6535134350793). //SET targeted TO FLAGPOLE. SET MODE TO "RTLS". SET h TO h + 50.
 SET OCISLY TO LATLNG(-0.319454412032009,-52.1849479434307). //SET targeted TO OCISLY. SET MODE TO "ASDS".
 
-// Set target
+// Set the selected target
 ADDONS:TR:SETTARGET(targeted).
 
-// Make the stage turn quicker than default.
+// Make the stage turn quicker than default
 SET STEERINGMANAGER:MAXSTOPPINGTIME TO 8.
 SET STEERINGMANAGER:PITCHPID:KD TO 1.35.
 SET STEERINGMANAGER:YAWPID:KD TO 1.35.
 SET STEERINGMANAGER:ROLLPID:KP TO 1.45.
 
 // Lock throttle
-SET thrott TO 0.
-LOCK THROTTLE TO thrott.
+SET thrott TO 0. LOCK THROTTLE TO thrott.
 
-// Functions
+// skip to line ~ 950 for the code that calls these.
+
+// // // //    //       //    //     //         ////    // // // //    // // //    // // // //    //     //       // // //
+//		       //       //    ////   //      //             //            //       //       //    ////   //     //
+//             //       //    ////   //    //               //            //       //       //    ////   //     //
+// // //       //       //    // //  //    //               //            //       //       //    // //  //        // //
+//             //       //    //  // //    //               //            //       //       //    //  // //             //
+//             //       //    //   ////      //             //            //       //       //    //   ////             //
+//             // // // //    //     //         ////        //         // // //    // // // //    //     //     // // //
+
+// Reads user input among some other things
 function read_input {
 	PARAMETER CHARNUM.
 	PARAMETER LINENUM.
@@ -117,6 +124,7 @@ function read_input {
 	}
 }
 
+// Removes previously entered character when user presses backspace. Thanks for being dumb, kerboscript.
 function remove_previous {
 	PARAMETER readtext.
 	PARAMETER CHARNUM.
@@ -127,6 +135,7 @@ function remove_previous {
 	RETURN readtext:REMOVE(index,1).
 }
 
+// Vehicle configuration - configure the script for the vehicle with user input
 function vehicle_config {
 	SET LINENUM TO 0.
 	IF ALT:RADAR < 1000 {
@@ -222,6 +231,7 @@ function vehicle_config {
 	WAIT 3.
 }
 
+// Find ALL the engines
 function getEngines {
 	IF LAUNCH = 1 AND SHIP:AVAILABLETHRUST = 0 {
 		STAGE. 
@@ -240,18 +250,21 @@ function getEngines {
 	}
 }
 
+// Distance between two points - who would've guessed
 function groundDist {
 	PARAMETER POINT1.
 	PARAMETER POINT2.
 	RETURN (POINT1:POSITION - POINT2:POSITION):MAG.
 }
 
+// Can you guess what this does? Yeah, that's an ARCTAN2 right there, boy. Fear this.
 function groundDir {
 	PARAMETER POINT1.
 	PARAMETER POINT2.
 	return ARCTAN2(POINT1:LNG - POINT2:LNG, POINT1:LAT - POINT2:LAT).
 }
 
+//                                  v-- says right here what it does, okay?
 function getaoa { // Angle of attack
 	SET up_vec TO SHIP:UP:VECTOR.
 	SET forw_tr_vec TO VXCL(up_vec,SHIP:VELOCITY:SURFACE).
@@ -262,6 +275,7 @@ function getaoa { // Angle of attack
 	RETURN aoa.
 }
 
+// Get the real max acceleration, because turns out it isn't constant during a burn
 function trueMaxAcceleration {
 	SET initialmass TO SHIP:MASS.
 	SET Isp TO engine:ISP.
@@ -296,6 +310,7 @@ function trueMaxAcceleration {
 	RETURN amax.
 }
 
+// CONTROOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOL
 function control {
 	IF EXPEND = 1 {
 		RETURN.
@@ -368,6 +383,7 @@ function control {
 	RETURN. 
 }
 
+// The boy that puts the pedal to the metal and moves the needle thing smooth af
 function throttlePID {
 	// Kinetics
 	SET a TO (SHIP:AVAILABLETHRUST/SHIP:MASS). //*SIN(getaoa()). // Accounts for cosine losses during the burn.
@@ -414,6 +430,7 @@ function throttlePID {
 	RETURN.
 }
 
+// dv required to recover S1, because apparently expendable rockets are out of fashion now
 function recdv { // Function calculates delta-v required for stage recovery, and returns said value in m/s
 	PARAMETER recoverytarget.
 
@@ -439,7 +456,7 @@ function recdv { // Function calculates delta-v required for stage recovery, and
 	RETURN rec_dv.
 }
 
-
+// Returns the liquid fuel used for the dv calculated above. Yeah, I have no idea what's happening at the end, but for some reason it works.
 function reclf { // Function calculates liquid fuel expended on stage recovery, returning the amount of LF required in units
 	PARAMETER recoverytarget.
 	SET Isp TO engine:ISP.
@@ -472,6 +489,7 @@ function reclf { // Function calculates liquid fuel expended on stage recovery, 
 	RETURN dlf*1000. // dlf in tons? Who knows, but seems about right.
 }
 
+// Cookie for the small lad who guesses what this does
 function launch_vessel {
 	// Calculate orbital dv
 	SET r TO AP + 600000. // Radius of kerbin + apoapsis + altitude
@@ -645,6 +663,7 @@ function launch_vessel {
 	RETURN.
 }
 
+// Fetches the hotdogs
 function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) and runs it
 	SET missionstatus TO "PERFORMING BOOSTBACK".
 	IF EXPEND = 1 {
@@ -753,6 +772,7 @@ function run_boostback { // Calculates optimal boostback direction (ASDS/RTLS) a
 	WAIT 2.
 }
 
+// Turns out that returning a hot, solid chunk of metal from a suborbital trajectory doesn't count as reusability
 function entryBurn {
 	IF ENGINEMODES = 1 {
 		IF engine:mode = "CenterOnly" {
@@ -779,6 +799,7 @@ function entryBurn {
 	SET initialmass TO SHIP:MASS.
 }
 
+// Bootycall
 function S2connect {
 	SET S1 TO PROCESSOR("S1").
 	SET S2 TO PROCESSOR("S2").
@@ -798,6 +819,7 @@ function S2connect {
 	RETURN.
 }
 
+// S1: bae come over | S2: can't | S1: my parents aren't home | S2:
 function MECOconnect {
 	CLEARSCREEN.
 	IF COMMDIR = "01" { // Here S1 stays as the main vessel; let's ping S2
@@ -842,6 +864,7 @@ function MECOconnect {
 	OUTPUT().
 }
 
+// Intentionally miss the target. Absolutely hilarious, amirite?
 function targetOvershoot {
 	IF MODE = "RTLS" {
 		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/8.25. 
@@ -852,6 +875,7 @@ function targetOvershoot {
 	}
 }
 
+// Let the dogs out
 function output {
 	IF DEBUG = 1 {
 		RETURN.
@@ -945,7 +969,7 @@ BRAKES ON.
 RCS ON.
 SAS OFF.
 
-// Exit if expending
+// Launch done - exit if expending
 IF EXPEND = 1 {
 	CLEARSCREEN.
 	PRINT "EXPENDABLE MODE - GOODBYE STAGE ONE.".
@@ -960,6 +984,7 @@ IF MODE = "ASDS" {
 	targetOvershoot().
 }
 
+// If we're boostbacking and not expending, boostback S1
 IF BOOSTBACK = 1 AND EXPEND = 0 {
 	OUTPUT().
 	run_boostback().
@@ -977,12 +1002,14 @@ CLEARSCREEN.
 getEngines().
 OUTPUT().
 
+// Slightly modify steering loop multipliers
 SET STEERINGMANAGER:PITCHPID:KD TO 1.4. // 1.35 --> 1.25 --> 1.55
 SET STEERINGMANAGER:YAWPID:KD TO 1.4. // 1.35
 SET STEERINGMANAGER:MAXSTOPPINGTIME TO 11.
 SET STEERINGMANAGER:YAWPID:KP TO 1.9.
 SET STEERINGMANAGER:PITCHPID:KP TO 1.9.
 
+// Move to coast phase for S1; start timers
 SET t0 TO TIME:SECONDS.
 SET t1 TO TIME:SECONDS + 2.
 SET missionstatus TO "STAGE 1 COAST".
@@ -1011,6 +1038,7 @@ IF MODE = "RTLS" AND EXPEND = 0 {
 }
 
 
+// Let's modify the steering loop again for landing guidance
 // 8/2.2/2.2 for first landing.
 SET STEERINGMANAGER:MAXSTOPPINGTIME TO 12. // 4 --> 5
 SET STEERINGMANAGER:PITCHPID:KD TO 1.1.
@@ -1018,17 +1046,19 @@ SET STEERINGMANAGER:YAWPID:KD TO 1.1.
 SET STEERINGMANAGER:PITCHPID:KP TO 2.4.
 SET STEERINGMANAGER:YAWPID:KP TO 2.4.
 
+// Start control loop prints
 IF CONTROLINITIALISED = FALSE {
 	SET CONTROLINITIALISED TO TRUE.
 }
 
+// Update mission status, start some timers
 SET missionstatus TO "GUIDING TOWARDS LANDING SITE".
-SET entryaoa TO getaoa().
 SET tInterval TO TIME:SECONDS.
 SET t0 TO TIME:SECONDS.
 SET t1 TO t0 + 2.
 SET t2 TO t0 + 10.
 
+// Again at 65 km, update steering loop
 WHEN ALT:RADAR < 65000 THEN {
 	SET STEERINGMANAGER:PITCHPID:KD TO 1.4. // 1.35 --> 1.25 --> 1.55
 	SET STEERINGMANAGER:YAWPID:KD TO 1.4. // 1.35
@@ -1037,20 +1067,22 @@ WHEN ALT:RADAR < 65000 THEN {
 	SET STEERINGMANAGER:PITCHPID:KP TO 1.95. // 1.9
 }
 
+// SLow down a bit just before touchdown
 WHEN ALT:RADAR < h+45 THEN { // 70 --> 50 --> 45
 	SET throttPID:SETPOINT TO -0.6. // --> -0.9 --> -1.0 --> -0.85 --> -0.6
 	SET thrott TO thrott + 0.1.
 } 
 
+// Rset target back to actual target before final approach
 IF MODE = "ASDS" AND EXPEND = 0 {
 	WHEN ALT:RADAR < 3500 THEN {
-		SET targeted TO target0.
-	}
+		SET targeted TO target0. }
 } ELSE {
 	SET target0 TO targeted.
 	targetOvershoot().
 }
 
+// Run control functions and suicide burn timers until it's time to fire our engines
 SET v_peak TO ABS(SHIP:VERTICALSPEED).
 UNTIL BURN = 1 OR EXPEND = 1 {
 	// Store peak velocity for drag approximation
@@ -1097,13 +1129,13 @@ UNTIL BURN = 1 OR EXPEND = 1 {
 		}
 
 		// Uncomment these if you want to log some impact variables
-		//LOG t_impact TO impactlog.txt.
-		//LOG t_decel TO decellog.txt.
+			//LOG t_impact TO impactlog.txt.
+			//LOG t_decel TO decellog.txt.
 	}
 }
 
 
-// Gear deployment
+// Gear deployment once we're low enough
 WHEN (ALT:RADAR < 400) AND (GEAR = FALSE) THEN { 
 	GEAR ON.
 	SET geardeploy TO 1.
@@ -1111,10 +1143,10 @@ WHEN (ALT:RADAR < 400) AND (GEAR = FALSE) THEN {
 	PRESERVE.
 }
 
+// Reset target again if it hasn't already happened; start some timers for prints
 SET targeted TO target0.
-SET t0 TO TIME:SECONDS.
-SET t1 TO t0 + 2.
-SET thrott TO 1. // Manual engine startup
+SET t0 TO TIME:SECONDS. SET t1 TO t0 + 2.
+SET thrott TO 1. // Manual engine restart because the throttle function is dumb
 UNTIL SHIP:STATUS = "LANDED" OR EXPEND = 1 {
 	// Time for prints
 	SET t0 TO TIME:SECONDS.
