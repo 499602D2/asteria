@@ -831,7 +831,7 @@ function S2connect {
 	RETURN.
 }
 
-// S1: bae come over | S2: can't | S1: my parents aren't home | S2:
+// Space: bae come over | S2: can't | Space: my parents aren't home | S2:
 function MECOconnect {
 	CLEARSCREEN.
 	IF COMMDIR = "01" { // Here S1 stays as the main vessel; let's ping S2
