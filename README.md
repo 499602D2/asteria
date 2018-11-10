@@ -40,3 +40,6 @@ To enter it to the file, make a new line and type in `SET MYLANDINGSPOT TO LATLN
 - _S1 crashes into S2:_ add a kOS terminal to S2 and run the s2gnc.ks program on it. Also set S2 guidance to enabled.
 - _Stage doesn't seem to control itself for landing:_ add (larger) grid fins or regular, steerable fins.
 - _Stage crashes into the ground:_ lower the aggressiveness.
+
+### Other tidbits
+- The script may benefit from more instructions per tick - to increase this, go to settings (while in a save), difficulty options, kOS, and drag the "Instructions per update" slider up a bit - even 250 might help a lot. Going above 400-500 will probably have zero effect.
