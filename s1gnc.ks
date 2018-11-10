@@ -14,7 +14,13 @@
 // 1.33 2018/11
 
 // TO DO:
-// Fix orbital insertion/periapsis lifting
+	// Ask whether to define orbit via AP+eccentricity or AP+PE
+	// Launch to target encounter (select target --> launch towards)
+	// Launch to a specifci point in GSO (i.e. degrees from (0,0))
+
+
+// Debug? (Suppresses OUTPUT() and skips vehicle configuration)
+SET DEBUG TO 0.
 
 CLEARSCREEN.
 PRINT "WELCOME TO ASTERIA!".
@@ -23,9 +29,6 @@ WAIT 2.
 
 CLEARSCREEN.
 vehicle_config().
-
-// Debug? (Suppresses OUTPUT())
-SET DEBUG TO 1.
 
 // Define constants.
 LOCK g TO SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2.
@@ -164,7 +167,7 @@ function vehicle_config {
 		} ELSE {
 			SET S2GUIDANCE TO 0.
 		} SET LINENUM TO LINENUM + 1.
-		
+
 		PRINT "Boostback S1? (y/n): ". 
 		SET input TO read_input(21,LINENUM,"STR").
 		IF input = "y" {
@@ -228,7 +231,7 @@ function vehicle_config {
 	}
 
 	IF LAUNCH = 1 {
-		SET h TO ALT:RADAR*0.65.
+		SET h TO ALT:RADAR*0.8. // 0.65 works fine too; changed to make the landings just a tad smoother
 		PRINT "S1 height set to " + round(h,0) + " meters".
 	} ELSE IF LAUNCH = 0 AND EXPEND = 0 {
 		PRINT "Enter the approx height of S1 (meters): ". 
@@ -911,7 +914,7 @@ function output {
 		PRINT "|TWR: " + round(twr,2).
 		PRINT "|Q: " + round(vesselq,2) + " atm".
 
-		IF addons:tr:hasimpact AND ALT:RADAR > 17000 {
+		IF addons:tr:hasimpact AND ALT:RADAR > 20000 AND missionstatus = "FLYING" {
 			PRINT "|------------------ RECOVERY -------------------.".
 			PRINT "|RTLS DELTA-V (m/s): " + round(recdv(LZ1),0).
 			PRINT "|ASDS DELTA-V (m/s): " + round(recdv(OCISLY),0).
@@ -919,13 +922,13 @@ function output {
 
 		IF CONTROLINITIALISED = TRUE {
 			PRINT "|------------------- ATTITUDE -------------------.".
-			PRINT "|>x-offset: " + xOffset.
-			PRINT "|>y-offset: " + yOffset.
+			PRINT "|X-OFFSET: " + xOffset.
+			PRINT "|Y-OFFSET: " + yOffset.
 		} 
 		
 		IF thrott_loop_initialised = TRUE {
 			PRINT "|------------------- THROTTLE -------------------.".
-			PRINT "|Throttle (%): " + round(thrott*100,2).
+			PRINT "|THROTTLE (%): " + round(thrott*100,2).
 			PRINT "|throttOUT: " + throttOUT.
 			PRINT "|tDiff: " + round((ABS(t_impact) - ABS(t_decelt)),4).
 			PRINT "|v_vertical (m/s): " + round(SHIP:VERTICALSPEED,1).
@@ -1077,9 +1080,9 @@ WHEN ALT:RADAR < 65000 THEN {
 }
 
 // SLow down a bit just before touchdown
-WHEN ALT:RADAR < h+45 THEN { // 70 --> 50 --> 45
-	SET throttPID:SETPOINT TO -0.6. // --> -0.9 --> -1.0 --> -0.85 --> -0.6
-	SET thrott TO thrott + 0.1.
+WHEN ALT:RADAR < h+50 THEN { // 70 --> 50 --> 45
+	SET throttPID:SETPOINT TO -0.5. // --> -0.9 --> -1.0 --> -0.85 --> -0.6
+	SET thrott TO thrott + 0.15.
 } 
 
 // Rset target back to actual target before final approach
@@ -1128,8 +1131,8 @@ UNTIL BURN = 1 OR EXPEND = 1 {
 		SET landinglf0 TO STAGE:LIQUIDFUEL. }
 
 
-	// Refresh console every 3 seconds
-	IF t0 > t1 + 3 {
+	// Refresh console once a second
+	IF t0 > t1 + 1 {
 		// Get loop time
 		SET t1 TO TIME:SECONDS.
 		SET tInterval TO TIME:SECONDS.
@@ -1180,7 +1183,8 @@ UNTIL SHIP:STATUS = "LANDED" OR EXPEND = 1 {
 
 // If we've touched down, do post-landing operations.
 IF SHIP:STATUS = "LANDED" OR SHIP:VERTICALSPEED >= 0 {
-	RCS ON.
+	WAIT 1.
+	RCS OFF.
 	SAS ON.
 	SET missionstatus TO "LANDED".
 
@@ -1190,6 +1194,7 @@ IF SHIP:STATUS = "LANDED" OR SHIP:VERTICALSPEED >= 0 {
 	}
 
 	SET landed TO 1.
+	WAIT 1.
 	BRAKES OFF.
 
 	WAIT 4.
