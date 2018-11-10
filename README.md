@@ -9,7 +9,7 @@ You _must_ have the following mods installed:
 - Trajectories __VERSION 1.7.1 - the 2.x versions don't currently work with kOS!__
 - kOS
 
-The version requirement for Trajectories effectively means that you must also use KSP version 1.3.1, unless you can get Trajectories working with whatever KSP release you're using.
+The version requirement for Trajectories effectively means that __you must also use KSP version 1.3.1__, _unless_ you can get Trajectories working with whatever KSP release you're using.
 
 Your craft should have the following specifications:
 - Grid fins and landing legs on S1 (don't use airbrakes - if you don't have grid fins, use regular fins)
