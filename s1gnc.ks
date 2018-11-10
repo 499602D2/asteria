@@ -19,7 +19,7 @@
 	// Launch to a specifci point in GSO (i.e. degrees from (0,0))
 
 
-// Debug? (Suppresses OUTPUT() and skips vehicle configuration)
+// Debug? (Suppresses OUTPUT())
 SET DEBUG TO 0.
 
 CLEARSCREEN.
@@ -1094,6 +1094,14 @@ IF MODE = "ASDS" AND EXPEND = 0 {
 	targetOvershoot().
 }
 
+IF AGGR = 3 {
+	SET SCDMLTP TO 2.
+} ELSE IF AGGR < 3 AND AGGR >= 2 {
+	SET SCDMLTP TO 1.75.
+} ELSE IF AGGR >= 1 AND AGGR < 2 {
+	SET SCDMLTP TO 1.5.
+}
+
 // Run control functions and suicide burn timers until it's time to fire our engines
 SET v_peak TO ABS(SHIP:VERTICALSPEED).
 UNTIL BURN = 1 OR EXPEND = 1 {
@@ -1112,7 +1120,7 @@ UNTIL BURN = 1 OR EXPEND = 1 {
 
 	// Conditional to start the burn
 	IF SHIP:VERTICALSPEED < 0 {
-		IF 2*t_impact - t_decel < -0.1 AND ALT:RADAR < 15000 { // Add time to t_decel if need more room for error
+		IF SCDMLTP*t_impact - t_decel < -0.1 AND ALT:RADAR < 15000 { // Add time to t_decel if need more room for error
 			SET BURN TO 1.
 			SET missionstatus TO "LANDING BURN".
 			OUTPUT().
