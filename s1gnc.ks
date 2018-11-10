@@ -4,7 +4,7 @@
 
 // Version history
 // 0.01: 2018/02/13
-// 0.99: 2018/02/17
+// 0.99: 2018/02/17 // Because apparently the first successful landing qualified as a 0.99...
 // 1.0b1 2018/03/10
 // 1.0b4 2018/06/08
 // 1.2 2018/07/20
