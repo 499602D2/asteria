@@ -8,6 +8,7 @@ Asteria is a kOS script capable of launching a two-staged craft to any specified
 You _must_ have the following mods installed:
 - Trajectories __VERSION 1.7.1 - the 2.x versions don't currently work with kOS!__
 - kOS
+- __KSP version 1.3.1 (read below)__
 
 The version requirement for Trajectories effectively means that __you must also use KSP version 1.3.1__, _unless_ you can get Trajectories working with whatever KSP release you're using.
 
