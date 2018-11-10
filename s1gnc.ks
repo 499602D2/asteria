@@ -156,6 +156,15 @@ function vehicle_config {
 			SET S2GUIDANCE TO 0.
 		} SET LINENUM TO LINENUM + 1.
 	} ELSE {
+		SET LAUNCH TO 0.
+		PRINT "Run S2 guidance? (y/n): ". 
+		SET input TO read_input(24,LINENUM,"STR").
+		IF input = "y" {
+			SET S2GUIDANCE TO 1.
+		} ELSE {
+			SET S2GUIDANCE TO 0.
+		} SET LINENUM TO LINENUM + 1.
+		
 		PRINT "Boostback S1? (y/n): ". 
 		SET input TO read_input(21,LINENUM,"STR").
 		IF input = "y" {
