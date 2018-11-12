@@ -234,10 +234,9 @@ CLEARSCREEN.
 PRINT "STARTING S2 GUIDANCE".
 PRINT " ".
 
-SET THROTTLE TO 0.15.
-WAIT 1.
-SET THROTTLE TO 0.35.
-WAIT 0.5.
+// Increase throttle in steps to not burn S1
+SET THROTT TO 0.15. WAIT 1.
+SET THROTT TO 0.35. WAIT 0.75.
 
 // Eccentricity: circular = 0, elliptical = [0,1], parabolic = 1, hyperbolic > 1
 gnc(AP, ECC, INCL).
@@ -252,3 +251,5 @@ PRINT "PE: " + round(ORBIT:PERIAPSIS,2).
 PRINT "".
 PRINT "EXITING PROGRAM.".
 PRINT "THANK YOU FOR FLYING WITH ASTERIA".
+
+UNLOCK THROTTLE.
