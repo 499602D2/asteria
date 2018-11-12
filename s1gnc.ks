@@ -15,6 +15,7 @@
 
 // TO DO:
 	// Ask whether to define orbit via AP+eccentricity or AP+PE
+	// RO mode
 	// Launch to target encounter (select target --> launch towards)
 	// Launch to a specifci point in GSO (i.e. degrees from (0,0))
 
@@ -1006,7 +1007,7 @@ RCS ON.
 IF EXPEND = 0 {
 	SET initialmass TO SHIP:MASS.
 	SET steer TO ADDONS:TR:CORRECTEDVEC. LOCK STEERING TO steer.
-	SET thrott TO 0. LOCK THROTTLE TO thrott.
+	SET thrott TO 0.
 }
 
 // Get engines again
