@@ -92,16 +92,6 @@ SET STEERINGMANAGER:ROLLPID:KP TO 1.45.
 // Lock throttle
 SET thrott TO 0. LOCK THROTTLE TO thrott.
 
-// skip to line ~ 950 for the code that calls these.
-
-// // // //    //       //    //     //         ////    // // // //    // // //    // // // //    //     //       // // //
-//		       //       //    ////   //      //             //            //       //       //    ////   //     //
-//             //       //    ////   //    //               //            //       //       //    ////   //     //
-// // //       //       //    // //  //    //               //            //       //       //    // //  //        // //
-//             //       //    //  // //    //               //            //       //       //    //  // //             //
-//             //       //    //   ////      //             //            //       //       //    //   ////             //
-//             // // // //    //     //         ////        //         // // //    // // // //    //     //     // // //
-
 // Reads user input among some other things
 function read_input {
 	PARAMETER CHARNUM.
@@ -1191,7 +1181,7 @@ UNTIL SHIP:STATUS = "LANDED" OR EXPEND = 1 {
 }
 
 // If we've touched down, do post-landing operations.
-IF SHIP:STATUS = "LANDED" OR SHIP:VERTICALSPEED >= 0 {
+IF SHIP:STATUS = "LANDED" {
 	WAIT 1.
 	RCS OFF.
 	SAS ON.
