@@ -238,6 +238,13 @@ function vehicle_config {
 function getEngines {
 	IF LAUNCH = 1 AND SHIP:AVAILABLETHRUST = 0 {
 		STAGE. 
+		IF ENGINEMODES = 1 { // Get engine's thrust at low-thrust mode
+			engine:TOGGLEMODE.
+			WAIT 0.01.
+			SET singlEngThrott TO engine:AVAILABLETHRUST.
+			ENGINE:TOGGLEMODE.
+			WAIT 0.01.
+		}
 	}
 
 	list engines in engineList.
@@ -423,7 +430,8 @@ function throttlePID {
 	SET throttOUT TO throttPID:OUTPUT.
 	SET thrott TO thrott + throttOUT.
 
-	IF ENGINEMODES = 1 { // Toggling engine modes
+	IF ENGINEMODES = 1 { // Toggling engine modes; if there's headroom for toggle, switch to single-engine mode
+
 		IF engine:MODE = "AllEngines" AND thrott < 0.45 AND ABS(t_impact) - ABS(t_decelt) > -1 { //0.45
 			engine:TOGGLEMODE.
 			WAIT 0.01.
