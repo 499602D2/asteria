@@ -159,6 +159,9 @@ function gnc {
 		SET STEER TO PARKNODE:DELTAV.
 	}
 
+	PRINT "COMMANDING S2 ENGINE RESTART".
+	WAIT 0.5.
+
 	SET THROTT TO 1.
 	UNTIL PARKNODE:DELTAV:MAG <= 0.5 {
 		SET STEER TO PARKNODE:DELTAV.
@@ -235,8 +238,9 @@ PRINT "STARTING S2 GUIDANCE".
 PRINT " ".
 
 // Increase throttle in steps to not burn S1
-SET THROTT TO 0.15. WAIT 1.
-SET THROTT TO 0.35. WAIT 0.75.
+SET THROTT TO 0.45. WAIT 0.1.
+SET THROTT TO 0.25. WAIT 3.
+SET THROTT TO 0.25. WAIT 2.
 
 // Eccentricity: circular = 0, elliptical = [0,1], parabolic = 1, hyperbolic > 1
 gnc(AP, ECC, INCL).

@@ -14,6 +14,7 @@
 // 1.33 2018/11
 
 // TO DO:
+	// Account for thrust vector during approach
 	// Ask whether to define orbit via AP+eccentricity or AP+PE
 	// RO mode
 	// Launch to target encounter (select target --> launch towards)
@@ -22,6 +23,16 @@
 
 // Debug? (Suppresses OUTPUT())
 SET DEBUG TO 0.
+IF DEBUG = 1 {
+	SET LAUNCH TO 0.
+	SET BOOSTBACK TO 0.
+	SET S2GUIDANCE TO 0.
+	SET EXPEND TO 0.
+	SET AGGR TO 3.
+	SET ENGINEMODES TO 1.
+	SET MODESWITCH TO 0.
+	SET h TO 28.
+}
 
 CLEARSCREEN.
 PRINT "WELCOME TO ASTERIA!".
@@ -29,7 +40,9 @@ PRINT "STARTING VEHICLE CONFIGURATION".
 WAIT 2.
 
 CLEARSCREEN.
-vehicle_config().
+IF DEBUG = 0 {
+	vehicle_config().
+}
 
 // Define constants.
 LOCK g TO SHIP:BODY:MU/(SHIP:BODY:RADIUS + ALT:RADAR)^2.
@@ -67,18 +80,21 @@ SET CONTROLINITIALISED TO FALSE.
 SET bbinitialised TO FALSE.
 
 // Define some target positions, choose target by commenting out the line of code after the coordinates
-SET LZ1 TO LATLNG(-0.115551384009776,-74.5681799085477). //SET targeted TO LZ1. SET MODE to "RTLS".
-SET LZ2 TO LATLNG(-0.0970402811341319,-74.5397113868808). SET targeted TO LZ2. SET MODE to "RTLS".
-SET LPAD TO LATLNG(-0.0972030750580504,-74.5576793237724). //SET targeted TO LPAD. SET MODE to "RTLS".
-SET VAB1 TO LATLNG(-0.096779141835831,-74.6173961940554). //SET targeted TO VAB1. SET MODE to "RTLS".
-SET VAB2 TO LATLNG(-0.0967667872308891,-74.6200422643941). //SET targeted TO VAB2. SET MODE to "RTLS". SET h TO h + 100.
-SET TRCKST TO LATLNG(-0.127201122059944,-74.605370914838). //SET targeted TO TRCKST. SET MODE to "RTLS". 
-SET ASTRO TO LATLNG(-0.0925716174970505,-74.6630942590381). //SET targeted TO ASTRO. SET MODE TO "RTLS".
-SET RADAR TO LATLNG(-0.122499220824709,-74.6522854766593). //SET targeted TO RADAR. SET MODE TO "RTLS". SET h TO h + 35.
-SET POOL TO LATLNG(-0.0868689418624337,-74.6614596133055). //SET targeted TO POOL. SET MODE TO "RTLS".
-SET TRIANGLE TO LATLNG(-0.102062495776151,-74.6512243417649). //SET targeted TO TRIANGLE. SET MODE TO "RTLS".
-SET FLAGPOLE TO LATLNG(-0.0941386551432377,-74.6535134350793). //SET targeted TO FLAGPOLE. SET MODE TO "RTLS". SET h TO h + 50.
-SET OCISLY TO LATLNG(-0.319454412032009,-52.1849479434307). //SET targeted TO OCISLY. SET MODE TO "ASDS".
+IF EXPEND = 0 {
+	SET LZ1 TO LATLNG(-0.115551384009776,-74.5681799085477). //SET targeted TO LZ1. SET MODE to "RTLS".
+	SET LZ2 TO LATLNG(-0.0970402811341319,-74.5397113868808). //SET targeted TO LZ2. SET MODE to "RTLS".
+	SET LPAD TO LATLNG(-0.0972030750580504,-74.5576793237724). SET targeted TO LPAD. SET MODE to "RTLS".
+	SET ABRT TO LATLNG(-0.0950449387474453,-74.1246293493763). //SET targeted TO ABRT. SET MODE TO "RTLS".
+	SET VAB1 TO LATLNG(-0.096779141835831,-74.6173961940554). //SET targeted TO VAB1. SET MODE to "RTLS".
+	SET VAB2 TO LATLNG(-0.0967667872308891,-74.6200422643941). //SET targeted TO VAB2. SET MODE to "RTLS". SET h TO h + 100.
+	SET TRCKST TO LATLNG(-0.127201122059944,-74.605370914838). //SET targeted TO TRCKST. SET MODE to "RTLS". 
+	SET ASTRO TO LATLNG(-0.0925716174970505,-74.6630942590381). //SET targeted TO ASTRO. SET MODE TO "RTLS".
+	SET RADAR TO LATLNG(-0.122499220824709,-74.6522854766593). //SET targeted TO RADAR. SET MODE TO "RTLS". SET h TO h + 35.
+	SET POOL TO LATLNG(-0.0868689418624337,-74.6614596133055). //SET targeted TO POOL. SET MODE TO "RTLS".
+	SET TRIANGLE TO LATLNG(-0.102062495776151,-74.6512243417649). //SET targeted TO TRIANGLE. SET MODE TO "RTLS".
+	SET FLAGPOLE TO LATLNG(-0.0941386551432377,-74.6535134350793). //SET targeted TO FLAGPOLE. SET MODE TO "RTLS". SET h TO h + 50.
+	SET OCISLY TO LATLNG(-0.319454412032009,-52.1849479434307). //SET targeted TO OCISLY. SET MODE TO "ASDS".
+}
 
 // Set the selected target
 ADDONS:TR:SETTARGET(targeted).
@@ -238,13 +254,6 @@ function vehicle_config {
 function getEngines {
 	IF LAUNCH = 1 AND SHIP:AVAILABLETHRUST = 0 {
 		STAGE. 
-		IF ENGINEMODES = 1 { // Get engine's thrust at low-thrust mode
-			engine:TOGGLEMODE.
-			WAIT 0.01.
-			SET singlEngThrott TO engine:AVAILABLETHRUST.
-			ENGINE:TOGGLEMODE.
-			WAIT 0.01.
-		}
 	}
 
 	list engines in engineList.
@@ -257,6 +266,14 @@ function getEngines {
 			SET ISP TO engine:ISP.
 			SET n TO n + 1.
 		}
+	}
+
+	IF ENGINEMODES = 1 AND LAUNCH = 1 { // Get engine's thrust at low-thrust mode
+		engine:TOGGLEMODE.
+		WAIT 0.01.
+		SET singlEngThrott TO engine:AVAILABLETHRUST.
+		ENGINE:TOGGLEMODE.
+		WAIT 0.01.
 	}
 }
 
@@ -322,6 +339,19 @@ function trueMaxAcceleration {
 
 // CONTROOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOL
 function control {
+	// TO-DO:
+	// Account for thrust vector;
+	// Whe drawing vector from ship to target and creating the offset vector, account
+	// for both the direction and magnitude of the thrust vector --> correct offset vector
+	// Should make for very straight approaches.
+
+	// To add: approximate estimated burn time at ~ 90% throttle --> predict the impact
+	// the thrust vector will have on the offset vector
+
+	// 1. sum thrust vector to corrected vector
+	// 2. take direction
+	// 3. apply to loop
+
 	IF EXPEND = 1 {
 		RETURN.
 	}
@@ -352,12 +382,12 @@ function control {
 
 		IF MODE = "RTLS" {
 			IF h > 20 {
-				SET TOGGLING TO 1.5.
+				SET TOGGLING TO 2.5. // 1.5
 			} ELSE {
 				SET TOGGLING TO 1.
 			}
 		} ELSE {
-			SET TOGGLING TO 2.5.
+			SET TOGGLING TO 2.75.
 		}
 		IF TOGGLING*xOffsetMEM1 > xOffsetMEM0 AND THROTT > 0 { // Propulsive force > aerodynamic forces
 			SET dir TO 1.
@@ -389,6 +419,9 @@ function control {
 	SET corrPos TO LATLNG(corrY, corrX).
 
 	SET corrVec TO -1 * corrPos:POSITION.
+	//SET velocityVec TO SHIP:VELOCITY:SURFACE.
+	//SET thrustVec TO velocityVec*thrott. // Scale thrust vector with current throttle
+
 	SET STEER TO corrVec:DIRECTION + R(0,0,SHIP:FACING:ROLL).
 	RETURN. 
 }
@@ -431,11 +464,15 @@ function throttlePID {
 	SET thrott TO thrott + throttOUT.
 
 	IF ENGINEMODES = 1 { // Toggling engine modes; if there's headroom for toggle, switch to single-engine mode
-
 		IF engine:MODE = "AllEngines" AND thrott < 0.45 AND ABS(t_impact) - ABS(t_decelt) > -1 { //0.45
+			SET currThrust TO 0.45*SHIP:AVAILABLETHRUST.
 			engine:TOGGLEMODE.
 			WAIT 0.01.
-			SET thrott TO 0.75. // So that the loop notices a change in throttle 
+			IF LAUNCH = 1 {
+				SET thrott TO currThrust/singlEngThrott.
+			} ELSE { 
+				SET thrott TO 0.75. // So that the loop notices a change in throttle 
+			}
 		} }
 
 	RETURN.
@@ -615,7 +652,7 @@ function launch_vessel {
 			SET recov_lf TO reclf(LZ1).
 			SET asdsrecov_lf TO reclf(OCISLY).
 			IF EXPEND = 0 {
-				IF (recov_lf*(5/9))*MARGIN > STAGE:LIQUIDFUEL { // 1.25
+				IF recov_lf*MARGIN > STAGE:LIQUIDFUEL { // 1.25
 					//SET MECO TO 1. // IF RTLS ONLY
 					IF asdsrecov_lf < recov_lf AND MODESWITCH = 1 {
 						SET MECO TO 0.
@@ -878,7 +915,7 @@ function MECOconnect {
 // Intentionally miss the target. Absolutely hilarious, amirite?
 function targetOvershoot {
 	IF MODE = "RTLS" {
-		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/8.25. 
+		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/8.5.  //8.25
 		SET targeted TO LATLNG(target0:LAT, target0:LNG - overshoot). // - for RTLS overshoot, + for ASDS
 	} ELSE {
 		SET overshoot TO (ABS(SHIP:GROUNDSPEED*ABS(SHIP:AIRSPEED/trueMaxAcceleration())*cos(getaoa()))/(2*3.14159*600000))*360/4. 
@@ -1094,7 +1131,7 @@ IF MODE = "ASDS" AND EXPEND = 0 {
 }
 
 IF AGGR = 3 {
-	SET SCDMLTP TO 2.
+	SET SCDMLTP TO 2.15.
 } ELSE IF AGGR < 3 AND AGGR >= 2 {
 	SET SCDMLTP TO 1.75.
 } ELSE IF AGGR >= 1 AND AGGR < 2 {
@@ -1166,7 +1203,7 @@ WHEN (ALT:RADAR < 400) AND (GEAR = FALSE) THEN {
 SET targeted TO target0.
 SET t0 TO TIME:SECONDS. SET t1 TO t0 + 2.
 SET thrott TO 1. // Manual engine restart because the throttle function is dumb
-UNTIL SHIP:STATUS = "LANDED" OR EXPEND = 1 {
+UNTIL SHIP:STATUS = "LANDED" OR SHIP:VERTICALSPEED >= 0 OR EXPEND = 1 {
 	// Time for prints
 	SET t0 TO TIME:SECONDS.
 
@@ -1214,5 +1251,9 @@ IF SHIP:STATUS = "LANDED" {
 		PRINT ".------------------------------------------------.".
 		PRINT "Thank you for flying with Asteria!".
 		PRINT "Exiting program.".
+	}
+
+	IF EXPEND = 0 {
+		CLEARSCREEN.
 	}
 }
